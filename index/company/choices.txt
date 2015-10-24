@@ -1,0 +1,11 @@
+1,SEB bankas
+2,DNB bankas
+3,Swedbank bankas
+4,Nordea bankas
+5,Ūkio bankas
+6,Šiaulių bankas
+7,Finasta
+8,Unicredit bankas
+9,BTA draudimas
+10,Lukoil degalinė
+11,Ribulė

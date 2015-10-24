@@ -1,0 +1,5 @@
+{bank} bankas
+    {bank}
+    {bank} bank
+    bankas {bank}
+    {bank:genitive} lizingas
