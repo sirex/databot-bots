@@ -29,7 +29,7 @@ def main():
 
     pars = subparsers.add_parser('pull')
     pars.add_argument('--delete', action='store_true', default=False, help='Delete missing files from local machine.')
-    pars.set_defaults(func=push)
+    pars.set_defaults(func=pull)
 
     args = parser.parse_args()
     args.func(args)

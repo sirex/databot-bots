@@ -2,8 +2,8 @@
 
 import requests
 import string
-import databot
 import hashlib
+import botlib
 
 from urllib.parse import urlencode
 from databot.db.serializers import dumps
@@ -74,4 +74,4 @@ def run(bot):
 
 
 if __name__ == '__main__':
-    databot.Bot('sqlite:///data/gyvunai.db').main(define, run)
+    botlib.runbot(define, run)
