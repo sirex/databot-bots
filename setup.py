@@ -10,6 +10,7 @@ setup(
     entry_points={
         'console_scripts': [
             'botlib-tool = botlib.tool:main',
+            'botlib-index = botlib.indexfinder:main',
         ],
     },
 )

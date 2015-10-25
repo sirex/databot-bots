@@ -1,0 +1,10 @@
+1,DNB
+2,Danske
+3,Finasta
+4,Nordea
+5,SEB
+6,Snoras
+7,Swedbank
+8,Šiaulių bankas
+9,Unicredit
+10,Ūkio bankas

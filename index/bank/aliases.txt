@@ -1,0 +1,10 @@
+{bank}
+    {bank} bankas
+    bankas {bank}
+    {bank} bank
+    {bank:genitive} lizingas
+    {bank:genitive} lizingas uab
+    {bank} ab
+
+dnb
+    dnb nord

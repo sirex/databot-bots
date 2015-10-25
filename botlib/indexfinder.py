@@ -1,8 +1,16 @@
 import re
 import pathlib
 import collections
+import argparse
+
+from databot.commands import CommandsManager, Command
 
 pattern_re = re.compile(r'{[^}]+}', re.UNICODE)
+norm_re = re.compile(r'\W+', re.UNICODE)
+
+
+def norm(value):
+    return norm_re.sub(' ', value).strip().lower()
 
 
 class IndexFinder(object):
@@ -15,7 +23,7 @@ class IndexFinder(object):
     def create_index(self, index):
         result = {}
         for name, data in index.items():
-            result[name] = {value: key for key, value in data['index']}
+            result[name] = {norm(value): (key, value) for key, value in data['index']}
         return result
 
     def create_aliases(self, index):
@@ -26,9 +34,16 @@ class IndexFinder(object):
                 patterns = []
                 for alias in aliases:
                     if '{' in alias:
-                        patterns.append(self.create_regex(alias))
+                        try:
+                            patterns.append(self.create_regex(alias))
+                        except re.error as e:
+                            raise ValueError('\n'.join([
+                                "Error while parsing %r index alias:" % name,
+                                "  %r <- %r" % (choice, alias),
+                                "%s" % e,
+                            ]))
                     else:
-                        index_aliases[name][alias] = choice
+                        index_aliases[name][norm(alias)] = choice
                 if patterns:
                     index_patterns[name].append((self.create_replacement_template(choice), patterns))
         return index_aliases, index_patterns
@@ -43,7 +58,7 @@ class IndexFinder(object):
         for place_holder in pattern_re.findall(value):
             name, flags = self.parse_expr(place_holder[1:-1])
             pattern = pattern.replace(place_holder, r'\b(?P<%s>\w+)\b' % name)
-        return re.compile('^%s$' % pattern, re.UNICODE)
+        return re.compile('^%s$' % pattern, re.UNICODE | re.IGNORECASE)
 
     def create_replacement_template(self, value):
         tempalte = value
@@ -60,35 +75,47 @@ class IndexFinder(object):
 
     def find(self, name, value):
         idx = self.index[name]
+        value = norm(value)
 
         if value in idx:
-            yield idx[value], value
+            yield idx[value]
 
         if value in self.aliases[name]:
             _value = self.aliases[name][value]
-            yield idx.get(_value), _value
+            yield idx.get(norm(_value), (None, _value))
 
         for replacement, patterns in self.patterns[name]:
             for regex in patterns:
                 match = regex.search(value)
-                if match and self.check_groups(match):
+                if match:
+                    for name, value in match.groupdict().items():
+                        if value not in self.index[name]:
+                            return False
+
                     _value = match.expand(replacement)
-                    yield idx.get(_value), _value
+                    yield idx.get(norm(_value), (None, _value))
 
 
-def load_index(path):
+def load_index(index):
     result = {}
-    path = pathlib.Path(path)
-    for index_path in path.iterdir():
-        result[index_path.name] = {'index': [], 'aliases': []}
-        if (index_path / 'choices.txt').exists():
-            with (index_path / 'choices.txt').open() as f:
-                for line in f:
+    index = index if isinstance(index, pathlib.Path) else pathlib.Path(index)
+    for path in index.iterdir():
+        result[path.name] = {'index': [], 'aliases': []}
+        if (path / 'choices.txt').exists():
+            with (path / 'choices.txt').open() as f:
+                for i, line in enumerate(f, 1):
                     line = line.strip()
-                    id, name = line.split(',', 1)
-                    result[index_path.name]['index'].append((int(id), name.strip()))
-        if (index_path / 'aliases.txt').exists():
-            with (index_path / 'aliases.txt').open() as f:
+                    try:
+                        id, name = line.split(',', 1)
+                    except ValueError as e:
+                        raise ValueError('\n'.join([
+                            "Error while parsing %s:%d:" % ((path / 'choices.txt'), i),
+                            "  %s" % line,
+                            "%s" % e,
+                        ]))
+                    result[path.name]['index'].append((int(id), name.strip()))
+        if (path / 'aliases.txt').exists():
+            with (path / 'aliases.txt').open() as f:
                 target, aliases = None, []
                 for line in f:
                     line = line.rstrip()
@@ -98,8 +125,45 @@ def load_index(path):
                         aliases.append(line.strip())
                     else:
                         if target:
-                            result[index_path.name]['aliases'].append((target, aliases))
+                            result[path.name]['aliases'].append((target, aliases))
                         target, aliases = line, []
                 if target:
-                    result[index_path.name]['aliases'].append((target, aliases))
+                    result[path.name]['aliases'].append((target, aliases))
     return result
+
+
+class UpdateCommand(Command):
+
+    def run(self, args):
+        index = pathlib.Path(args.index_path)
+        finder = IndexFinder(load_index(index))
+        for path in index.iterdir():
+            if (path / 'missing.txt').exists():
+                print("Update %r index:" % path.name)
+                missing = set()
+                with (path / 'missing.txt').open() as f:
+                    for line in f:
+                        line = line.strip()
+                        result = list(finder.find(path.name, line))
+                        if result:
+                            print('  %r -> %r' % (line, result))
+                        else:
+                            missing.add(line)
+                # with (path / 'missing.txt').open('w') as f:
+                #     for line in sorted(missing):
+                #         f.write('%s\n' % line)
+        print('Done.')
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--index', type=str, default='index', dest='index_path', help="Path to index directory.")
+
+    sps = parser.add_subparsers(dest='command')
+
+    cmgr = CommandsManager(None, sps)
+    cmgr.register('update', UpdateCommand)
+
+    args = parser.parse_args()
+
+    cmgr.run(args.command, args, default=None)

@@ -1,16 +1,4 @@
-viešoji įstaiga
-    všį
-    vį
-uždaroji akcinė bendrovė
-    uab
-individuali įmonė
-    iį
-    ind. įmonė
-lietuvos respublikos
-    lr
-skyrius
-filialas
-    {city|} filialas
-    {country|} filialas
-    filialas {city|}
-    filialas {country|}
+1,Viešoji įstaiga
+2,Uždaroji akcinė bendrovė
+3,Individuali įmonė
+4,Lietuvos respublikos

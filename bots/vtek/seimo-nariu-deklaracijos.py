@@ -111,6 +111,7 @@ def extract(kind, first_key, skip=None):
                     item = {}
                 if (key, val) not in skip:
                     if key in ('Kitos sandorio salies pavadinimas', 'Juridinio asmens pavadinimas'):
+                        item['%s (originalus)' % key] = val
                         val = clean_company_name(val)
                     if key == 'Sandorio suma Lt':
                         key = 'Sandorio suma Eur'
