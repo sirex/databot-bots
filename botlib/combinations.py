@@ -1,4 +1,4 @@
-def combination_states(n, s):
+def _combinations(n, s):
     state = list(range(1, n))
     final = list(range(s - n + 1, s))
 
@@ -15,10 +15,16 @@ def combination_states(n, s):
 
 
 def combinations(n, tokens):
-    if n == 1:
+    c = len(tokens)
+
+    if n == 1 and n <= c:
         yield (tokens,)
 
-    if n > 1:
-        c = len(tokens)
-        for s in combination_states(n, len(tokens)):
+    if n > 1 and n <= c:
+        for s in _combinations(n, len(tokens)):
             yield tuple([tokens[i:j] for i, j in zip((0,) + s, s + (c,))])
+
+
+def strjoin(items):
+    for item in items:
+        yield tuple(map(' '.join, item))
