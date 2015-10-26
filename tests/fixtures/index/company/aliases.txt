@@ -1,5 +1,8 @@
 {bank} bankas
     {bank}
-    {bank} bank
-    bankas {bank}
-    {bank:genitive} lizingas
+
+{company}
+    {company-type} {company}
+
+Programuotojų artelė
+    Programmers of Vilnius

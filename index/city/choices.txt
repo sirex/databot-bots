@@ -1,3 +1,3 @@
 1,Jurbarkas
-1,Kaunas
-1,Vilnius
+2,Kaunas
+3,Vilnius
