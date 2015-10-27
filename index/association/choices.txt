@@ -1,0 +1,17 @@
+1,Nacionalinė moterų krepšinio lyga
+1,Druskininkų klubas
+1,Parliamentary forum for democracy
+1,Choras Ave Verum
+1,Lietuvos sąjūdis
+1,Ronaldo Reagano laisvės centras
+1,Teisininkų klubas
+1,Lietuvai pagražinti
+1,Macierz szkolna
+1,Kelmės rotary klubas
+1,Lietuvių baltarusių centras
+1,Žmonės sprendžia
+1,Liberalios reformos
+1,Mūsų dialogas
+1,Už pilietinę visuomenę
+1,Konservatyvioji ateitis
+1,Šviešos centras

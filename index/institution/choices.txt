@@ -1,0 +1,8 @@
+1,Europos parlamentas
+2,Seimas
+3,Seimo kanceliarija
+4,Susisiekimo ministerija
+5,Teisingumo ministerija
+6,Vyriausybė
+6,Vyriausybės
+7,Kūno kultūros ir sporto departamentas

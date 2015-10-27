@@ -1,3 +1,4 @@
 1,Viešoji įstaiga
 2,Uždaroji akcinė bendrovė
 3,Individuali įmonė
+4,Akcinė bendrovė

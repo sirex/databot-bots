@@ -8,3 +8,8 @@
 8,Šiaulių bankas
 9,Unicredit
 10,Ūkio bankas
+11,Sampo
+12,Zanavykų bankelis
+13,Kretingos kredito unija
+14,Pohjola finance
+15,Vilniaus bankas

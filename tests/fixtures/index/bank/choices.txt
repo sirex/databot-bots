@@ -1,4 +1,4 @@
-1,danske
-2,dnb
-3,seb
-4,swedbank
+1,Danske
+2,DNB
+3,SEB
+4,Swedbank

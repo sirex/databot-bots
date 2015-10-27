@@ -1,11 +1,59 @@
-1,SEB bankas
-2,DNB bankas
-3,Swedbank bankas
-4,Nordea bankas
-5,Ūkio bankas
-6,Šiaulių bankas
-7,Finasta
-8,Unicredit bankas
-9,BTA draudimas
-10,Lukoil degalinė
-11,Ribulė
+1,BTA draudimas
+2,Lukoil degalinė
+3,Ribulė
+4,Kauno energija
+5,Kėdainių grūdai
+7,Linas Agro Group
+8,Grigiškės
+9,Julmida
+10,Delta
+11,Vikonda
+12,Anykščių ratas
+13,Vestekspress
+14,Achimenė
+15,Ateik laiku
+16,Autodis
+17,Biogrūdai
+18,Calenberg
+19,Catus
+20,Deka projektai
+21,Elektros pajėgos
+22,Eltopas
+23,Interneto žinios
+24,Klaipėdos laikraščio redakcija
+25,Krasta auto
+26,Naftos atliekų perdirbimo centras
+27,Narsa.lt
+28,Paįstrio vėjas
+29,Puikis.lt
+30,Solo technologijos
+31,Utenos radiotechnika
+32,Steltronika
+33,Kramas statyba
+34,Šimesta
+35,Agrorema
+36,Autotoja
+37,Aviaekspresas
+38,Baltic clipper
+39,Edvervita
+40,Eglonta
+41,Ekskomisarų biuras
+42,Etalinkas
+43,Eva king
+44,Fmį Orion Securites
+45,Horo.lt
+46,JMA centras
+47,Lidma
+48,Lietuvos rytas
+49,Mažeikių varduva
+50,Patikimi automobiliai
+51,Platina group
+52,Skagenas
+53,Trakų kooperacijos prekyba
+54,Vėtrija
+55,Wine and smile
+56,Fesla
+57,Meno rinkos agentūra
+58,Autoerdvė
+59,Omen faustum
+60,Eveleta

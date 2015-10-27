@@ -1,0 +1,17 @@
+Vilnius
+    Vilniaus
+
+Kaunas
+    Kauno
+
+Klaipėda
+    Klaipėdos
+
+Šiauliai
+    Šiaulių
+
+Kelmė
+    Kelmės
+
+Jurbarkas
+    Jurbarko

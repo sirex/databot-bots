@@ -1,5 +1,5 @@
-1,danske bankas
-2,dnb bankas
-3,seb bankas
-4,swedbank bankas
-5,programuotojų artelė
+1,Danske bankas
+2,DNB bankas
+3,SEB bankas
+4,Swedbank bankas
+5,Programuotojų artelė

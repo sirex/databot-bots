@@ -1,2 +1,16 @@
-{bank}
+(import)
     {bank}
+    {sole-trader}
+
+{company}
+    {company-type} {company}
+    {company} {company-type}
+    {company-type} {company} stebėtojų taryba
+    {company-type} {company} pva
+    {company} {city}
+
+Julmida
+    d mikutienės firma julmida
+
+Vikonda
+    koncernas vikonda

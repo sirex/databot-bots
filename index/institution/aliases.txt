@@ -1,0 +1,6 @@
+{institution}
+    lietuvos respublikos {institution}
+    lr {institution}
+
+{0}
+    {institution} prie {institution}

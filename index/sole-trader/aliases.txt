@@ -1,0 +1,4 @@
+{sole-trader}
+    {sole-trader} iį
+    {sole-trader} individuali įmonė
+    {sole-trader} ind. įmonė

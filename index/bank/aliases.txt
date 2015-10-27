@@ -5,6 +5,22 @@
     {bank:genitive} lizingas
     {bank:genitive} lizingas uab
     {bank} ab
+    {bank} gyvybės draudimas
+    kredito unija {bank}
+    {bank} {city} filialas
+    {bank} {city} skyrius
 
-dnb
+DNB
     dnb nord
+
+Nordea
+    {company-type} nordea finance lithuania
+
+Šiaulių bankas
+    Šiaulių banko
+
+Ūkio bankas
+    Ūkio banko
+
+Vilniaus bankas
+    Vilniaus banko

@@ -72,7 +72,7 @@ class IndexFinder(object):
                 return False
         return True
 
-    def pattern_finder(self, patterns, value):
+    def pattern_finder(self, patterns, value, stack=None):
         """Search for all possible matches for given pattern and value.
 
         How does this work.
@@ -131,6 +131,7 @@ class IndexFinder(object):
         """
         n_patterns = len(patterns)
         choices = [[] for i in range(n_patterns)]
+        stack = stack or set()
 
         for comb in strjoin(combinations(n_patterns, value)):
             skip = False
@@ -147,37 +148,58 @@ class IndexFinder(object):
 
             # Find all indexes.
             for i, (token, pattern) in enumerate(zip(comb, patterns)):
-                print(token, pattern)
                 if isinstance(pattern, tuple):
                     appended = False
                     name, flags = pattern
-                    for id, _value in self.find(name, token):
-                        choices[i].append(norm(_value))
-                        appended = True
+                    if (name, token) not in stack:
+                        for item in self.find(name, token, stack | {(name, token)}):
+                            choices[i].append(item)
+                            appended = True
                     if not appended:
                         break
 
         # Finally generate all possible combinations from found indexes and matching raw strings.
         for option in itertools.product(*choices):
-            yield {k[0]: v for k, v in zip(patterns, option) if isinstance(k, tuple)}
+            yield [(k, v) for k, v in zip(patterns, option) if isinstance(k, tuple)]
 
-    def find(self, name, value):
+    def pattern_to_str(self, pattern):
+        result = []
+        for group in pattern:
+            if isinstance(group, tuple):
+                name, flags = group
+                expr = '%s:%s' % (name, ','.join(flags)) if flags else name
+                result.append('{%s}' % expr)
+            else:
+                result.append(group)
+        return ' '.join(result)
+
+    def find(self, name, value, stack=None):
         idx = self.index[name]
         value = norm(value)
+        stack = stack or set()
 
         if value in idx:
-            yield idx[value]
+            yield idx[value] + ('index',)
 
         if value in self.aliases[name]:
             _value = self.aliases[name][value]
-            yield idx.get(norm(_value), (None, _value))
+            yield idx.get(norm(_value), (None, _value)) + ('alias',)
 
         value = value.split()
         for replacement, patterns in self.patterns[name]:
             for pattern in patterns:
-                for groups in self.pattern_finder(patterns, value):
-                    _value = replacement.format(**groups)
-                    yield idx.get(norm(_value), (None, _value))
+                for groups in self.pattern_finder(pattern, value, stack):
+                    source = '%s -> %s' % (self.pattern_to_str(pattern), replacement)
+                    if replacement == '(import)':
+                        (((name, flags), (id, _value, _source)),) = groups
+                        yield (id, _value, source)
+                    else:
+                        _value = replacement
+                        groups = [(k, norm(v)) for (k, flags), (id, v, _source) in groups]
+                        for i, (k, v) in enumerate(groups):
+                            _value = _value.replace('{%d}' % i, v)
+                        _value = _value.format(**dict(groups))
+                        yield idx.get(norm(_value), (None, _value)) + (source,)
 
 
 def load_index(index):
@@ -227,12 +249,16 @@ class UpdateCommand(Command):
                 missing = set()
                 with (path / 'missing.txt').open() as f:
                     for line in f:
+                        found = False
                         line = line.strip()
-                        result = list(finder.find(path.name, line))
-                        if result:
-                            print('  %r -> %r' % (line, result))
-                        else:
+                        print('  %s' % line)
+                        for id, value, source in finder.find(path.name, line):
+                            found = True
+                            print('      - %r, %r, %s' % (id, value, source))
+                        if not found:
                             missing.add(line)
+                        else:
+                            print()
                 # with (path / 'missing.txt').open('w') as f:
                 #     for line in sorted(missing):
                 #         f.write('%s\n' % line)
