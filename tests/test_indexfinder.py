@@ -74,19 +74,19 @@ class IndexFinderTests(unittest.TestCase):
         value = 'uždaroji akcinė bendrovė programmers of vilnius'
         self.assertEqual(list(self.index.pattern_finder(pattern, value.split())), [
             [
-                (('company-type', ()), (1, 'UAB', 'alias')),
-                (('company', ()), (5, 'Programuotojų artelė', 'alias')),
+                (('company-type', ()), (1, 'UAB', 'company-type', 'alias')),
+                (('company', ()), (5, 'Programuotojų artelė', 'company', 'alias')),
             ],
         ])
 
     def test_replace(self):
-        groups = [(('city', ('lemma',)), (None, 'Vilnius', ''))]
+        groups = [(('city', ('lemma',)), (None, 'Vilnius', 'city', 'extends'))]
         replacement = [('city', ('genitive', 'title')), ' filialas']
         self.assertEqual(self.index.replace(groups, replacement), 'Vilniaus filialas')
 
     def test_parse_and_replace(self):
         parse = self.index.parse_patterns
-        groups = [(parse('{city:lemma}')[0], (None, 'Vilnius', ''))]
+        groups = [(parse('{city:lemma}')[0], (None, 'Vilnius', 'city', 'extends'))]
         replacement = parse('{city:genitive,title} filialas')
         self.assertEqual(self.index.replace(groups, replacement), 'Vilniaus filialas')
 
@@ -97,7 +97,7 @@ class IndexFinderTests(unittest.TestCase):
                 'aliases': [],
             },
         })
-        self.assertIndex('a', 'x', [(1, 'x', 'index')])
+        self.assertIndex('a', 'x', [(1, 'x', 'a', 'index')])
 
     def test_find_from_alias(self):
         self.index = IndexFinder({
@@ -106,7 +106,7 @@ class IndexFinderTests(unittest.TestCase):
                 'aliases': [('x', ['y'])],
             },
         })
-        self.assertIndex('a', 'y', [(1, 'x', 'alias')])
+        self.assertIndex('a', 'y', [(1, 'x', 'a', 'alias')])
 
     def test_find_from_alias_without_index(self):
         self.index = IndexFinder({
@@ -115,7 +115,7 @@ class IndexFinderTests(unittest.TestCase):
                 'aliases': [('x', ['y'])],
             },
         })
-        self.assertIndex('a', 'y', [(None, 'x', 'alias')])
+        self.assertIndex('a', 'y', [(None, 'x', 'a', 'alias')])
 
     def test_find_from_pattern(self):
         self.index = IndexFinder({
@@ -124,7 +124,7 @@ class IndexFinderTests(unittest.TestCase):
                 'aliases': [('{a}', ['{a} y'])],
             },
         })
-        self.assertIndex('a', 'x y', [(1, 'x', '{a} y -> {a}')])
+        self.assertIndex('a', 'x y', [(1, 'x', 'a', 'pattern')])
 
     def test_find_from_pattern_without_index(self):
         self.index = IndexFinder({
@@ -145,7 +145,7 @@ class IndexFinderTests(unittest.TestCase):
                 ],
             },
         })
-        self.assertIndex('a', 'z y', [(None, 'x', '{a} y -> {a}')])
+        self.assertIndex('a', 'z y', [(None, 'x', 'a', 'pattern')])
 
     def test_find_from_positional_alias_target(self):
         self.index = IndexFinder({
@@ -160,7 +160,7 @@ class IndexFinderTests(unittest.TestCase):
                 'aliases': [],
             },
         })
-        self.assertIndex('a', 'x', [(None, 'x', '{b} -> {0}')])
+        self.assertIndex('a', 'x', [(None, 'x', 'a', 'pattern')])
 
     def test_extends(self):
         self.index = IndexFinder({
@@ -171,11 +171,23 @@ class IndexFinderTests(unittest.TestCase):
                 ],
             },
             'b': {
+                'index': [],
+                'aliases': [
+                    ('(extends)', ['{c}']),
+                ],
+            },
+            'c': {
+                'index': [],
+                'aliases': [
+                    ('(extends)', ['{d}']),
+                ],
+            },
+            'd': {
                 'index': [(1, 'x')],
                 'aliases': [],
             },
         })
-        self.assertIndex('a', 'x', [(1, 'x', '{b} -> (extends)')])
+        self.assertIndex('a', 'x', [(1, 'x', 'd', 'extends')])
 
     def test_lemma(self):
         self.index = IndexFinder({
@@ -186,7 +198,7 @@ class IndexFinderTests(unittest.TestCase):
                 ],
             },
         })
-        self.assertIndex('city', 'Vilniaus', [(1, 'Vilnius', '{city:lemma} -> {city}')])
+        self.assertIndex('city', 'Vilniaus', [(1, 'Vilnius', 'city', 'pattern')])
         self.assertIndex('city', 'Notacity', [])
 
     def test_change_form(self):
@@ -202,9 +214,7 @@ class IndexFinderTests(unittest.TestCase):
                 ],
             },
         })
-        self.assertIndex('enterprise', 'Graužinienės IĮ', [
-            (None, 'Graužinienės IĮ', '{surname:lemma} iį -> {surname:genitive,title} IĮ')
-        ])
+        self.assertIndex('enterprise', 'Graužinienės IĮ', [(None, 'Graužinienės IĮ', 'enterprise', 'pattern')])
 
     def test_recursive_index(self):
         self.index = IndexFinder({
@@ -228,26 +238,24 @@ class IndexFinderTests(unittest.TestCase):
                 ],
             },
         })
-        self.assertIndex('finance', 'ŠIAULIŲ BANKO LIZINGAS', [
-            (1, 'Šiaulių bankas', '{finance:lemma} lizingas -> {finance}')
-        ])
+        self.assertIndex('finance', 'ŠIAULIŲ BANKO LIZINGAS', [(1, 'Šiaulių bankas', 'finance', 'pattern')])
 
     def test_danske(self):
         self.index = IndexFinder(load_index('tests/fixtures/index'))
-        self.assertIndex('bank', 'danske bank', [(1, 'Danske', '{bank} bank -> {bank}')])
+        self.assertIndex('bank', 'danske bank', [(1, 'Danske', 'bank', 'pattern')])
 
     def test_find(self):
         self.index = IndexFinder(load_index('tests/fixtures/index'))
         self.assertIndex('bank', 'unknown', [])
         self.assertIndex('bank', 'unknown', [])
-        self.assertIndex('bank', 'dnb', [(2, 'DNB', 'index')])
-        self.assertIndex('bank', 'seb', [(3, 'SEB', 'index')])
-        self.assertIndex('bank', 'danske bank', [(1, 'Danske', '{bank} bank -> {bank}')])
+        self.assertIndex('bank', 'dnb', [(2, 'DNB', 'bank', 'index')])
+        self.assertIndex('bank', 'seb', [(3, 'SEB', 'bank', 'index')])
+        self.assertIndex('bank', 'danske bank', [(1, 'Danske', 'bank', 'pattern')])
         self.assertIndex('company', 'dnb bankas', [
-            (2, 'DNB bankas', 'index'),
-            (2, 'DNB bankas', '{bank} -> {bank} bankas'),
+            (2, 'DNB bankas', 'company', 'index'),
+            (2, 'DNB bankas', 'company', 'pattern'),
         ])
-        self.assertIndex('company', 'dnb', [(2, 'DNB bankas', '{bank} -> {bank} bankas')])
-        self.assertIndex('company', 'danske bank', [(1, 'Danske bankas', '{bank} -> {bank} bankas')])
-        self.assertIndex('company', 'bankas swedbank', [(4, 'Swedbank bankas', '{bank} -> {bank} bankas')])
-        self.assertIndex('company', 'dnb lizingas', [(2, 'DNB bankas', '{bank} -> {bank} bankas')])
+        self.assertIndex('company', 'dnb', [(2, 'DNB bankas', 'company', 'pattern')])
+        self.assertIndex('company', 'danske bank', [(1, 'Danske bankas', 'company', 'pattern')])
+        self.assertIndex('company', 'bankas swedbank', [(4, 'Swedbank bankas', 'company', 'pattern')])
+        self.assertIndex('company', 'dnb lizingas', [(2, 'DNB bankas', 'company', 'pattern')])

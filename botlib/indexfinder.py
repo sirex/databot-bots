@@ -191,7 +191,7 @@ class IndexFinder(object):
     def replace(self, groups, replacement):
         args = []
         kwargs = {}
-        for (name, flags), (id, value, source) in groups:
+        for (name, flags), (id, value, index, source) in groups:
             args.append(value)
             kwargs[name] = value
 
@@ -221,23 +221,22 @@ class IndexFinder(object):
         stack = stack or set()
 
         if value in idx:
-            yield idx[value] + ('index',)
+            yield idx[value] + (name, 'index',)
 
         if value in self.aliases[name]:
             _value = self.aliases[name][value]
-            yield idx.get(norm(_value), (None, _value)) + ('alias',)
+            yield idx.get(norm(_value), (None, _value)) + (name, 'alias',)
 
         value = value.split()
         for replacement, patterns in self.patterns[name]:
             for pattern in patterns:
                 for groups in self.pattern_finder(pattern, value, stack):
-                    source = '%s -> %s' % (self.pattern_to_str(pattern), self.pattern_to_str(replacement))
                     if replacement == ['(extends)']:
-                        (((name, flags), (id, _value, _source)),) = groups
-                        yield (id, _value, source)
+                        (((_name, flags), (id, _value, _index, _source)),) = groups
+                        yield (id, _value, _index, 'extends')
                     else:
                         _value = self.replace(groups, replacement)
-                        yield idx.get(norm(_value), (None, _value)) + (source,)
+                        yield idx.get(norm(_value), (None, _value)) + (name, 'pattern',)
 
 
 def load_index(index):
