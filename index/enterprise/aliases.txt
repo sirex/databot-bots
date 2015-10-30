@@ -1,13 +1,9 @@
-(import)
-    {bank}
-    {sole-trader}
-
-{company}
-    {company-type} {company}
-    {company} {company-type}
-    {company-type} {company} stebėtojų taryba
-    {company-type} {company} pva
-    {company} {city}
+{enterprise}
+    {abbreviation} {enterprise}
+    {enterprise} {abbreviation}
+    {abbreviation} {enterprise} stebėtojų taryba
+    {abbreviation} {enterprise} pva
+    {enterprise} {city}
 
 Julmida
     d mikutienės firma julmida

@@ -1,0 +1,5 @@
+Lietuvos Respublikos {government}
+    lr {government}
+
+{0}
+    {government} prie {government}

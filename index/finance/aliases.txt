@@ -1,26 +1,17 @@
-{bank}
-    {bank} bankas
-    bankas {bank}
-    {bank} bank
-    {bank:genitive} lizingas
-    {bank:genitive} lizingas uab
-    {bank} ab
-    {bank} gyvybės draudimas
-    kredito unija {bank}
-    {bank} {city} filialas
-    {bank} {city} skyrius
+{finance}
+    {finance} bankas
+    bankas {finance}
+    {finance} bank
+    {finance:genitive} lizingas
+    {finance:genitive} lizingas uab
+    {finance} ab
+    {finance} gyvybės draudimas
+    kredito unija {finance}
+    {finance} {city} filialas
+    {finance} {city} skyrius
 
 DNB
     dnb nord
 
 Nordea
-    {company-type} nordea finance lithuania
-
-Šiaulių bankas
-    Šiaulių banko
-
-Ūkio bankas
-    Ūkio banko
-
-Vilniaus bankas
-    Vilniaus banko
+    {abbreviation} nordea finance lithuania

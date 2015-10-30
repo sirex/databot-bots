@@ -7,7 +7,8 @@ class LoadIndexTests(unittest.TestCase):
 
     def test_load_index(self):
         self.maxDiff = None
-        self.assertEqual(load_index('tests/fixtures/index'), {
+        data, debug_info = load_index('tests/fixtures/index')
+        self.assertEqual(data, {
             'bank': {
                 'index': [
                     (1, 'Danske'),
@@ -69,7 +70,7 @@ class IndexFinderTests(unittest.TestCase):
         self.assertEqual(self.index.parse_expr('company:genitive'), ('company', ('genitive',)))
 
     def test_patterns(self):
-        self.index = IndexFinder(load_index('tests/fixtures/index'))
+        self.index = IndexFinder(*load_index('tests/fixtures/index'))
         pattern = [('company-type', ()), ('company', ())]
         value = 'uždaroji akcinė bendrovė programmers of vilnius'
         self.assertEqual(list(self.index.pattern_finder(pattern, value.split())), [
@@ -241,11 +242,11 @@ class IndexFinderTests(unittest.TestCase):
         self.assertIndex('finance', 'ŠIAULIŲ BANKO LIZINGAS', [(1, 'Šiaulių bankas', 'finance', 'pattern')])
 
     def test_danske(self):
-        self.index = IndexFinder(load_index('tests/fixtures/index'))
+        self.index = IndexFinder(*load_index('tests/fixtures/index'))
         self.assertIndex('bank', 'danske bank', [(1, 'Danske', 'bank', 'pattern')])
 
     def test_find(self):
-        self.index = IndexFinder(load_index('tests/fixtures/index'))
+        self.index = IndexFinder(*load_index('tests/fixtures/index'))
         self.assertIndex('bank', 'unknown', [])
         self.assertIndex('bank', 'unknown', [])
         self.assertIndex('bank', 'dnb', [(2, 'DNB', 'bank', 'index')])

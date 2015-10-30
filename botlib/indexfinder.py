@@ -25,10 +25,10 @@ def norm(value):
 
 class IndexFinder(object):
 
-    def __init__(self, index):
+    def __init__(self, index, debug_info=None):
         self.index = index
         self.index = self.create_index(index)
-        self.aliases, self.patterns = self.create_aliases(index)
+        self.aliases, self.patterns = self.create_aliases(index, debug_info)
 
     def create_index(self, index):
         result = {}
@@ -36,22 +36,35 @@ class IndexFinder(object):
             result[name] = {norm(value): (key, value) for key, value in data['index']}
         return result
 
-    def create_aliases(self, index):
+    def create_aliases(self, index, debug_info=None):
         index_aliases = collections.defaultdict(dict)
         index_patterns = collections.defaultdict(list)
         for name, data in index.items():
-            for choice, aliases in data['aliases']:
+            for i, (choice, aliases) in enumerate(data['aliases']):
                 patterns = []
-                for alias in aliases:
+                for j, alias in enumerate(aliases):
                     if '{' in alias:
                         try:
-                            patterns.append(self.parse_patterns(alias))
+                            _patterns = self.parse_patterns(alias)
                         except re.error as e:
                             raise ValueError('\n'.join([
                                 "Error while parsing %r index alias:" % name,
                                 "  %r <- %r" % (choice, alias),
                                 "%s" % e,
                             ]))
+                        else:
+                            patterns.append(_patterns)
+
+                        if debug_info is not None:
+                            for pattern in _patterns:
+                                if isinstance(pattern, tuple) and pattern[0] not in index:
+                                    filename, _, linenos = debug_info[name]['aliases'][i]
+                                    lineno = linenos[j]
+                                    raise ValueError('\n'.join([
+                                        "Error while parsing %s:%d:" % (filename, lineno),
+                                        "  %s" % alias,
+                                        "Specified index '%s' does not exists." % pattern[0],
+                                    ]))
                     else:
                         index_aliases[name][norm(alias)] = choice
                 if patterns:
@@ -241,9 +254,14 @@ class IndexFinder(object):
 
 def load_index(index):
     result = {}
+    debug_info = {}
     index = index if isinstance(index, pathlib.Path) else pathlib.Path(index)
     for path in index.iterdir():
+        if not path.is_dir():
+            continue
+
         result[path.name] = {'index': [], 'aliases': []}
+        debug_info[path.name] = {'aliases': []}
         if (path / 'choices.txt').exists():
             with (path / 'choices.txt').open() as f:
                 for i, line in enumerate(f, 1):
@@ -257,30 +275,40 @@ def load_index(index):
                             "%s" % e,
                         ]))
                     result[path.name]['index'].append((int(id), name.strip()))
+
         if (path / 'aliases.txt').exists():
             with (path / 'aliases.txt').open() as f:
                 target, aliases = None, []
-                for line in f:
+                for i, line in enumerate(f, 1):
                     line = line.rstrip()
                     if not line:
                         continue
                     if line.startswith(' '):
-                        aliases.append(line.strip())
+                        aliases.append((i, line.strip()))
                     else:
                         if target:
-                            result[path.name]['aliases'].append((target, aliases))
+                            line_numbers, aliases = zip(*aliases) if aliases else ([], [])
+                            result[path.name]['aliases'].append((target, list(aliases)))
+                            debug_info[path.name]['aliases'][-1][2].extend(line_numbers)
                         target, aliases = line, []
+                        debug_info[path.name]['aliases'].append((str(path / 'aliases.txt'), i, []))
                 if target:
-                    result[path.name]['aliases'].append((target, aliases))
-    return result
+                    line_numbers, aliases = zip(*aliases)
+                    result[path.name]['aliases'].append((target, list(aliases)))
+                    debug_info[path.name]['aliases'][-1][2].extend(line_numbers)
+
+    return result, debug_info
 
 
 class UpdateCommand(Command):
 
     def run(self, args):
         index = pathlib.Path(args.index_path)
-        finder = IndexFinder(load_index(index))
+        finder = IndexFinder(*load_index(index))
         for path in index.iterdir():
+            if not path.is_dir():
+                continue
+
             if (path / 'missing.txt').exists():
                 print("Update %r index:" % path.name)
                 missing = set()
@@ -289,9 +317,9 @@ class UpdateCommand(Command):
                         found = False
                         line = line.strip()
                         print('  %s' % line)
-                        for id, value, source in finder.find(path.name, line):
+                        for id, value, name, source in finder.find(path.name, line):
                             found = True
-                            print('      - %r, %r, %s' % (id, value, source))
+                            print('      - %r, %r, %s, %s' % (id, value, name, source))
                         if not found:
                             missing.add(line)
                         else:

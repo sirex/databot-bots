@@ -1,4 +1,3 @@
-{sole-trader}
-    {sole-trader} iį
-    {sole-trader} individuali įmonė
-    {sole-trader} ind. įmonė
+{individual:genitive} individuali įmonė
+    {individual} iį
+    {individual} ind. įmonė
