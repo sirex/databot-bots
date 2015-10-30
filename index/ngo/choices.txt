@@ -15,3 +15,5 @@
 1,Už pilietinę visuomenę
 1,Konservatyvioji ateitis
 1,Šviešos centras
+1,Mokslo ir enciklopedijų leidybos institutas
+1,Labdaros ir paramos fondas Išgirsk mane

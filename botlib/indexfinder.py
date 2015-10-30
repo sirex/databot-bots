@@ -3,12 +3,20 @@ import pathlib
 import collections
 import argparse
 import itertools
+import gramtool
 
 from databot.commands import CommandsManager, Command
 from botlib.combinations import combinations, strjoin
 
 pattern_re = re.compile(r'({[^}]+})', re.UNICODE)
 norm_re = re.compile(r'\W+', re.UNICODE)
+
+
+FLAGS = {
+    'title': str.title,
+    'lemma': lambda v: (gramtool.get_lemma(v) or v),
+    'genitive': lambda v: (gramtool.change_form(v, case='genitive') or v),
+}
 
 
 def norm(value):
@@ -47,20 +55,24 @@ class IndexFinder(object):
                     else:
                         index_aliases[name][norm(alias)] = choice
                 if patterns:
-                    index_patterns[name].append((choice, patterns))
+                    index_patterns[name].append((self.parse_patterns(choice), patterns))
         return index_aliases, index_patterns
 
     def parse_expr(self, expr):
         name, flags = expr.split(':', 1) if ':' in expr else (expr, '')
         flags = tuple(filter(None, map(str.strip, flags.split(','))))
+        for flag in flags:
+            if flag not in FLAGS:
+                raise ValueError("Unknown flag '%s' in '%s' expression." % (flag, expr))
         return name, flags
 
     def parse_patterns(self, value):
         result = []
         for token in pattern_re.split(value):
-            token = token.strip()
+            token = token
             if token.startswith('{'):
                 name, flags = self.parse_expr(token[1:-1])
+                name = int(name) if name.isnumeric() else name
                 result.append((name, flags))
             elif token:
                 result.append(token)
@@ -138,11 +150,13 @@ class IndexFinder(object):
 
             # First check all raw strings, if at least one raw string does not match, skip.
             for i, (token, pattern) in enumerate(zip(comb, patterns)):
-                if token == pattern:
-                    choices[i].append(token)
-                elif isinstance(pattern, str):
-                    skip = True
-                    break
+                if isinstance(pattern, str):
+                    pattern = pattern.strip()
+                    if token == pattern:
+                        choices[i].append(token)
+                    else:
+                        skip = True
+                        break
             if skip:
                 continue
 
@@ -151,6 +165,7 @@ class IndexFinder(object):
                 if isinstance(pattern, tuple):
                     appended = False
                     name, flags = pattern
+                    token = self.handle_flags(token, flags)
                     if (name, token) not in stack:
                         for item in self.find(name, token, stack | {(name, token)}):
                             choices[i].append(item)
@@ -171,7 +186,34 @@ class IndexFinder(object):
                 result.append('{%s}' % expr)
             else:
                 result.append(group)
-        return ' '.join(result)
+        return ''.join(result)
+
+    def replace(self, groups, replacement):
+        args = []
+        kwargs = {}
+        for (name, flags), (id, value, source) in groups:
+            args.append(value)
+            kwargs[name] = value
+
+        result = []
+        for token in replacement:
+            if isinstance(token, tuple):
+                name, flags = token
+                if isinstance(name, int):
+                    value = args[name]
+                else:
+                    value = kwargs[name]
+                value = self.handle_flags(value, flags)
+                result.append(value)
+            else:
+                result.append(token)
+
+        return ''.join(result)
+
+    def handle_flags(self, value, flags):
+        for flag in flags:
+            value = FLAGS[flag](value)
+        return value
 
     def find(self, name, value, stack=None):
         idx = self.index[name]
@@ -189,16 +231,12 @@ class IndexFinder(object):
         for replacement, patterns in self.patterns[name]:
             for pattern in patterns:
                 for groups in self.pattern_finder(pattern, value, stack):
-                    source = '%s -> %s' % (self.pattern_to_str(pattern), replacement)
-                    if replacement == '(import)':
+                    source = '%s -> %s' % (self.pattern_to_str(pattern), self.pattern_to_str(replacement))
+                    if replacement == ['(extends)']:
                         (((name, flags), (id, _value, _source)),) = groups
                         yield (id, _value, source)
                     else:
-                        _value = replacement
-                        groups = [(k, norm(v)) for (k, flags), (id, v, _source) in groups]
-                        for i, (k, v) in enumerate(groups):
-                            _value = _value.replace('{%d}' % i, v)
-                        _value = _value.format(**dict(groups))
+                        _value = self.replace(groups, replacement)
                         yield idx.get(norm(_value), (None, _value)) + (source,)
 
 

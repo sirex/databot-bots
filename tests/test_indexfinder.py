@@ -20,7 +20,7 @@ class LoadIndexTests(unittest.TestCase):
                         '{bank} bankas',
                         '{bank} bank',
                         'bankas {bank}',
-                        '{bank:genitive} lizingas',
+                        '{bank:lemma} lizingas',
                     ]),
                 ],
             },
@@ -60,7 +60,9 @@ class IndexFinderTests(unittest.TestCase):
         self.assertEqual(list(self.index.find(index, value)), result)
 
     def test_parse_patterns(self):
-        self.assertEqual(self.index.parse_patterns('bankas {company}'), ['bankas', ('company', ())])
+        self.assertEqual(self.index.parse_patterns('bankas {finance}'), ['bankas ', ('finance', ())])
+        self.assertEqual(self.index.parse_patterns('{city:lemma}'), [('city', ('lemma',))])
+        self.assertEqual(self.index.parse_patterns('(extends)'), ['(extends)'])
 
     def test_parse_expr(self):
         self.assertEqual(self.index.parse_expr('company'), ('company', ()))
@@ -76,6 +78,17 @@ class IndexFinderTests(unittest.TestCase):
                 (('company', ()), (5, 'Programuotojų artelė', 'alias')),
             ],
         ])
+
+    def test_replace(self):
+        groups = [(('city', ('lemma',)), (None, 'Vilnius', ''))]
+        replacement = [('city', ('genitive', 'title')), ' filialas']
+        self.assertEqual(self.index.replace(groups, replacement), 'Vilniaus filialas')
+
+    def test_parse_and_replace(self):
+        parse = self.index.parse_patterns
+        groups = [(parse('{city:lemma}')[0], (None, 'Vilnius', ''))]
+        replacement = parse('{city:genitive,title} filialas')
+        self.assertEqual(self.index.replace(groups, replacement), 'Vilniaus filialas')
 
     def test_find_from_index(self):
         self.index = IndexFinder({
@@ -149,12 +162,12 @@ class IndexFinderTests(unittest.TestCase):
         })
         self.assertIndex('a', 'x', [(None, 'x', '{b} -> {0}')])
 
-    def test_import(self):
+    def test_extends(self):
         self.index = IndexFinder({
             'a': {
                 'index': [],
                 'aliases': [
-                    ('(import)', ['{b}']),
+                    ('(extends)', ['{b}']),
                 ],
             },
             'b': {
@@ -162,7 +175,36 @@ class IndexFinderTests(unittest.TestCase):
                 'aliases': [],
             },
         })
-        self.assertIndex('a', 'x', [(1, 'x', '{b} -> (import)')])
+        self.assertIndex('a', 'x', [(1, 'x', '{b} -> (extends)')])
+
+    def test_lemma(self):
+        self.index = IndexFinder({
+            'city': {
+                'index': [(1, 'Vilnius')],
+                'aliases': [
+                    ('{city}', ['{city:lemma}']),
+                ],
+            },
+        })
+        self.assertIndex('city', 'Vilniaus', [(1, 'Vilnius', '{city:lemma} -> {city}')])
+        self.assertIndex('city', 'Notacity', [])
+
+    def test_change_form(self):
+        self.index = IndexFinder({
+            'surname': {
+                'index': [(1, 'Graužinienė')],
+                'aliases': [],
+            },
+            'enterprise': {
+                'index': [],
+                'aliases': [
+                    ('{surname:genitive,title} IĮ', ['{surname:lemma} iį']),
+                ],
+            },
+        })
+        self.assertIndex('enterprise', 'Graužinienės IĮ', [
+            (None, 'Graužinienės IĮ', '{surname:lemma} iį -> {surname:genitive,title} IĮ')
+        ])
 
     def test_recursive_index(self):
         self.index = IndexFinder({
@@ -176,6 +218,23 @@ class IndexFinderTests(unittest.TestCase):
             },
         })
         self.assertIndex('a', 'x', [])
+
+    def test_siauliu_banko_lizingas(self):
+        self.index = IndexFinder({
+            'finance': {
+                'index': [(1, 'Šiaulių bankas')],
+                'aliases': [
+                    ('{finance}', ['{finance:lemma} lizingas']),
+                ],
+            },
+        })
+        self.assertIndex('finance', 'ŠIAULIŲ BANKO LIZINGAS', [
+            (1, 'Šiaulių bankas', '{finance:lemma} lizingas -> {finance}')
+        ])
+
+    def test_danske(self):
+        self.index = IndexFinder(load_index('tests/fixtures/index'))
+        self.assertIndex('bank', 'danske bank', [(1, 'Danske', '{bank} bank -> {bank}')])
 
     def test_find(self):
         self.index = IndexFinder(load_index('tests/fixtures/index'))

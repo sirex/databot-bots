@@ -1,0 +1,13 @@
+(extends)
+    {person}
+    {enterprise}
+    {government}
+    {party}
+    {ngo}
+    {preschool}
+    {school}
+    {university}
+    {college}
+    {finance}
+    {insurance}
+    {individual}

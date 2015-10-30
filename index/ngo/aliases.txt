@@ -1,0 +1,17 @@
+{ngo}
+    aso {ngo}
+    asociacija {ngo}
+    {ngo} draugija
+    visuomeninė organizacija {ngo}
+    vo {ngo}
+    visuomeninis judėjimas {ngo}
+    visuomeninė organizacija {ngo} pirmininkas
+
+{city:title,genitive} rotary klubas
+    {city:lemma} rotary klubas
+
+Macierz szkolna
+    lietuvos lenkų mokyklų mokytojų draugija macierz szkolna
+
+Mokslo ir enciklopedijų leidybos institutas
+    111959573

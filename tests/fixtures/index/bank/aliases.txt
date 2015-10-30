@@ -2,4 +2,4 @@
     {bank} bankas
     {bank} bank
     bankas {bank}
-    {bank:genitive} lizingas
+    {bank:lemma} lizingas
