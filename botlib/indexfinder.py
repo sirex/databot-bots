@@ -6,7 +6,7 @@ import itertools
 import gramtool
 
 from databot.commands import CommandsManager, Command
-from botlib.combinations import combinations, strjoin
+from botlib.compositions import compositions, strjoin
 
 pattern_re = re.compile(r'({[^}]+})', re.UNICODE)
 norm_re = re.compile(r'\W+', re.UNICODE)
@@ -126,7 +126,7 @@ class IndexFinder(object):
 
             pattern_finder([('company-type', ()), ('company', ())], 'uždaroji akcinė bendrovė programmers of vilnius')
 
-        Finder will collect all posible combinations for 'uždaroji akcinė bendrovė programmers of vilnius' and two
+        Finder will collect all posible compositions for 'uždaroji akcinė bendrovė programmers of vilnius' and two
         patterns:
 
             ('uždaroji', 'akcinė bendrovė programmers of vilnius')
@@ -139,12 +139,12 @@ class IndexFinder(object):
         there is not raw strings, only two patterns, so nothing will happen here.
 
         Then collect all possible choices for given patterns, by searching index specified in each pattern for value
-        from generated combinations. In our case, only 'uždaroji akcinė bendrovė' will give 'uab' and 'programmers of
-        vilnius' will give 'programuotojų artelė', all other combination values will not return any results.
+        from generated compositions. In our case, only 'uždaroji akcinė bendrovė' will give 'uab' and 'programmers of
+        vilnius' will give 'programuotojų artelė', all other composition values will not return any results.
 
             [['uab'], ['programuotojų artelė']]
 
-        And finally generate all possible combinations:
+        And finally generate all possible compositions:
 
             {'company-type': 'uab', 'company': 'programuotojų artelė'}
 
@@ -158,7 +158,7 @@ class IndexFinder(object):
         choices = [[] for i in range(n_patterns)]
         stack = stack or set()
 
-        for comb in strjoin(combinations(n_patterns, value)):
+        for comb in strjoin(compositions(n_patterns, value)):
             skip = False
 
             # First check all raw strings, if at least one raw string does not match, skip.
@@ -186,7 +186,7 @@ class IndexFinder(object):
                     if not appended:
                         break
 
-        # Finally generate all possible combinations from found indexes and matching raw strings.
+        # Finally generate all possible compositions from found indexes and matching raw strings.
         for option in itertools.product(*choices):
             yield [(k, v) for k, v in zip(patterns, option) if isinstance(k, tuple)]
 
