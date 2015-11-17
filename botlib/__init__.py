@@ -2,10 +2,12 @@ import sys
 import databot
 import pathlib
 import importlib.machinery
+import pkg_resources as pres
 
 
 def get_bot_module(path):
-    module_path = pathlib.Path('bots', '%s.py' % path)
+    home_path = pres.resource_filename(pres.Requirement.parse('databot-bots'), 'bots')
+    module_path = pathlib.Path(home_path, '%s.py' % path)
     if module_path.exists():
         module_name = path.replace('/', '.').replace('-', '_')
         return importlib.machinery.SourceFileLoader('botlib.bots.%s' % module_name, str(module_path)).load_module()
