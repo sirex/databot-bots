@@ -19,7 +19,7 @@ packaged)::
 
 Install databot and all its dependencies::
 
-  pip install ./gramtool ./databot ./databot-bots
+  pip install -e ./gramtool -e ./databot -e ./databot-bots
 
 Prepare data directory::
 
