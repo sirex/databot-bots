@@ -7,6 +7,7 @@ setup(
     install_requires=[
         'databot',
         'gramtool',
+        'GeoAlchemy2',
     ],
     entry_points={
         'console_scripts': [
