@@ -109,29 +109,29 @@ def run(bot):
             'data/osm/LT',
         ])
 
-    bot.output.info('Query places')
-    bot.pipe('places').clean().append(query_places(), progress='places')
+        bot.output.info('Query places')
+        bot.pipe('places').clean().append(query_places(), progress='places')
 
-    csv_output_path = path / 'places.csv'
-    bot.output.info('Export places to %s' % csv_output_path)
-    bot.pipe('places').export(str(csv_output_path), include=[
-        'osm_id',
-        'type',
-        'place',
-        'population',
-        'wikipedia_title',
-        'wikipedia_lang',
-        'lon',
-        'lat',
-        'admin_level_6_osm_id',
-        'admin_level_6',
-        'admin_level_5_osm_id',
-        'admin_level_5',
-        'admin_level_4_osm_id',
-        'admin_level_4',
-    ])
+        csv_output_path = path / 'places.csv'
+        bot.output.info('Export places to %s' % csv_output_path)
+        bot.pipe('places').export(str(csv_output_path), include=[
+            'osm_id',
+            'type',
+            'place',
+            'population',
+            'wikipedia_title',
+            'wikipedia_lang',
+            'lon',
+            'lat',
+            'admin_level_6_osm_id',
+            'admin_level_6',
+            'admin_level_5_osm_id',
+            'admin_level_5',
+            'admin_level_4_osm_id',
+            'admin_level_4',
+        ])
 
-    bot.compact()
+        bot.compact()
 
 
 if __name__ == '__main__':
