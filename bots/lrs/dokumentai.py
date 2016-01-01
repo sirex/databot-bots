@@ -9,11 +9,6 @@ def define(bot):
     bot.define('dokumentų-puslapiai')
     bot.define('susijusių-dokumentų-sąrašas')
     bot.define('susijusių-dokumentų-puslapiai')
-    # bot.define('klausimų-puslapiai')
-    # bot.define('balsavimų-sąrašas')
-    # bot.define('balsavimų-puslapiai')
-    # bot.define('registracijos-sąrašas')
-    # bot.define('registracijos-puslapiai')
 
 
 def run(bot):
