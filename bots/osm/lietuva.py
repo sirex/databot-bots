@@ -26,6 +26,7 @@ def query_places():
             point.c.place,
             point.c.name,
             point.c.population,
+            point.c.wikipedia,
             sa.func.ST_X(sa.func.ST_Transform(point.c.way, srid)).label('point_lon'),
             sa.func.ST_Y(sa.func.ST_Transform(point.c.way, srid)).label('point_lat'),
             polygon.c.osm_id,
@@ -52,6 +53,11 @@ def query_places():
             yield data['osm_id'], data
             data = {}
 
+        if row.point_wikipedia and ':' in row.point_wikipedia:
+            wikipedia_lang, wikipedia_title = row.point_wikipedia.split(':', 1)
+        else:
+            wikipedia_lang, wikipedia_title = None, row.point_wikipedia
+
         data.update({
             'osm_id': row.point_osm_id,
             'type': row.point_place,
@@ -59,6 +65,8 @@ def query_places():
             'lon': row.point_lon,
             'lat': row.point_lat,
             'population': row.point_population,
+            'wikipedia_title': wikipedia_title,
+            'wikipedia_lang': wikipedia_lang,
             'admin_level_%s' % row.polygon_admin_level: row.polygon_name,
             'admin_level_%s_osm_id' % row.polygon_admin_level: row.polygon_osm_id,
         })
@@ -72,8 +80,9 @@ def define(bot):
 
 
 def run(bot):
+    path = pathlib.Path('data/osm')
     source = 'http://download.gisgraphy.com/openstreetmap/pbf/LT.tar.bz2'
-    output = pathlib.Path('data/osm/LT.tar.gz2')
+    output = path / 'LT.tar.gz2'
 
     bot.output.info('Downloading %s' % source)
     http_code = subprocess.check_output(funcy.flatten([
@@ -91,15 +100,27 @@ def run(bot):
         bot.output.info('Extracting %s' % output)
         subprocess.check_call(['tar', '--directory', str(output.parent), '-xjf', str(output)])
 
+        subprocess.check_call([
+            'osm2pgsql',
+            '--create',
+            '--database', 'lietuva',
+            '--style', str(path / 'lietuva.style'),
+            '--input-reader', 'pbf',
+            'data/osm/LT',
+        ])
+
     bot.output.info('Query places')
     bot.pipe('places').clean().append(query_places(), progress='places')
 
-    bot.output.info('Export places to %s' % output.with_name('places.csv'))
-    bot.pipe('places').export(str(output.with_name('places.csv')), include=[
+    csv_output_path = path / 'places.csv'
+    bot.output.info('Export places to %s' % csv_output_path)
+    bot.pipe('places').export(str(csv_output_path), include=[
         'osm_id',
         'type',
         'place',
         'population',
+        'wikipedia_title',
+        'wikipedia_lang',
         'lon',
         'lat',
         'admin_level_6_osm_id',
