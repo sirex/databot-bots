@@ -100,6 +100,7 @@ def run(bot):
         bot.output.info('Extracting %s' % output)
         subprocess.check_call(['tar', '--directory', str(output.parent), '-xjf', str(output)])
 
+        # https://github.com/openstreetmap/osm2pgsql#usage
         subprocess.check_call([
             'osm2pgsql',
             '--create',
