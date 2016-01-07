@@ -62,6 +62,11 @@ def split_name(data):
 
 
 def define(bot):
+    bot.define('savivaldybių rinkimai 2007')
+    bot.define('savivaldybių sąrašo puslapiai 2007')
+    bot.define('savivaldybių rezultatų nuorodos 2007')
+    bot.define('savivaldybių rezultatų puslapiai 2007')
+
     bot.define('savivaldybių rinkimai 2011')
     bot.define('savivaldybių sąrašo puslapiai 2011')
     bot.define('savivaldybių rezultatų nuorodos 2011')
@@ -75,6 +80,41 @@ def define(bot):
 
 
 def run(bot):
+
+    if bot.run('2007'):
+        start_url = 'http://www.vrk.lt/statiniai/puslapiai/2007_savivaldybiu_tarybu_rinkimai/lt/savivaldybes.html'
+        with bot.pipe('savivaldybių rinkimai 2007').append(start_url).dedup():
+            with bot.pipe('savivaldybių sąrašo puslapiai 2007').download():
+                with bot.pipe('savivaldybių rezultatų nuorodos 2007').select(['table.partydata tr td b > a@href']).dedup():  # noqa
+                    with bot.pipe('savivaldybių rezultatų puslapiai 2007').download():
+                        bot.pipe('tarybos nariai').select(join(
+                            [
+                                'xpath://table[contains(@class,"partydata")][1]/tbody/tr[count(td)=3]', (
+                                    'tr > td[2] > a@href', call(split_name, {
+                                        'sąrašas': 'tr > td[1]:text',
+                                        'pavardė vardas': 'tr > td[2] > a:text',
+                                        'nuo': first('tr > td[3]:text', value('2007-03-04')),
+                                        'iki': value('2011-02-26'),
+                                        'mandato panaikinimo priežastis': value(None),
+                                        'savivaldybė': call(fix_municipality_names, '/font[size="5"] > b:text'),
+                                        'kadencija': value(2007),
+                                    })
+                                )
+                            ],
+                            [
+                                'xpath://table[contains(@class,"partydata")][2]/tbody/tr[count(td)=5]', (
+                                    'tr > td[2] > a@href', call(split_name, {
+                                        'sąrašas': 'tr > td[1]:text',
+                                        'pavardė vardas': 'tr > td[2] > a:text',
+                                        'nuo': first('tr > td[3]:text', value('2007-03-04')),
+                                        'iki': first('tr > td[4]:text', value('2011-02-26')),
+                                        'mandato panaikinimo priežastis': 'tr > td[5]:text',
+                                        'savivaldybė': call(fix_municipality_names, '/font[size="5"] > b:text'),
+                                        'kadencija': value(2007),
+                                    })
+                                )
+                            ],
+                        ))
 
     if bot.run('2011'):
         start_url = 'http://www.2013.vrk.lt/2011_savivaldybiu_tarybu_rinkimai/output_lt/savivaldybiu_tarybu_sudetis/savivaldybes.html'  # noqa
@@ -147,6 +187,8 @@ def run(bot):
                         ))
 
     bot.compact()
+
+    bot.pipe('tarybos nariai').export('data/vrk/savivaldybiu-tarybu-sudetis/tarybos-nariai.csv')
 
 
 if __name__ == '__main__':
