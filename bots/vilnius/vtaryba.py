@@ -68,8 +68,8 @@ def define(bot):
 
 def run(bot):
 
-    path = pathlib.Path('data/vilnius/vtaryba')
-    if gitsync('git@github.com:vilnius/taryba.git', path):
+    path = pathlib.Path('data/vilnius/vtaryba-git')
+    if gitsync('https://github.com/vilnius/taryba.git', path):
         questions = readcsv(path / 'data/questions.csv', sep=';', key='url', update={'url': question_url})
         bot.pipe('questions').append(questions, progress='questions').dedup()
 
@@ -86,7 +86,7 @@ def run(bot):
                 bot.pipe('attachment preview').download(update={'source': row.value})
 
     bot.pipe('attachment preview').export('data/vilnius/vtaryba/attachments.csv', include=['key', 'size'], update={
-        'size': row.value['text'].length,
+        'size': row.value['content'].length,
     })
 
     bot.compact()

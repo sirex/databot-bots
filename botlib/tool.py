@@ -11,7 +11,10 @@ def call(cmd):
 def _rsync(args):
     delete = '--delete-after' if args.delete else ''
     dry_run = '--dry-run' if args.dry_run else ''
-    exclude = ['--exclude=%s' % pattern for pattern in ['.ipynb_checkpoints/']]
+    exclude = ['--exclude=%s' % pattern for pattern in [
+        '.ipynb_checkpoints/',
+        'vtaryba-git/',
+    ]]
     return ['rsync', dry_run, '-avi', '--human-readable', '--progress', delete] + exclude
 
 
