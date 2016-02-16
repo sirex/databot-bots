@@ -59,11 +59,21 @@ def clean_redirect_url(value):
         return value[6:]
 
 
+def attachment_export(item):
+    return {
+        'attachment-url': item.key,
+        'question-url': item.value['question-url'],
+        'size': len(item.value['content']),
+    }
+
+
 def define(bot):
     bot.define('questions')
     bot.define('question pages')
-    bot.define('attachment links')
+    bot.define('attachment preview links')
     bot.define('attachment preview')
+    bot.define('attachment links')
+    bot.define('attachments')
 
 
 def run(bot):
@@ -75,19 +85,30 @@ def run(bot):
 
     with bot.pipe('questions'):
         with bot.pipe('question pages').download():
-            bot.pipe('attachment links').select([
+            bot.pipe('attachment preview links').select([
                 'a.viewLink xpath:./b[text()="Rodyti kaip HTML"]/..', ('@href', row.key)
             ])
+            bot.pipe('attachment links').select([
+                '.info_table a.downloadLink', ('@href', {
+                    'link-title': 'b:text',
+                    'question-url': row.key,
+                })
+            ])
 
-    with bot.pipe('attachment links'):
+    with bot.pipe('attachment preview links'):
         with bot.pipe('attachment preview').download(update={'source': row.value}):
             key = call(clean_redirect_url, 'xpath:/html/head/meta[@http-equiv="refresh"]/@content?')
-            with bot.pipe('attachment links').select([(key, row.value['source'])]):
+            with bot.pipe('attachment preview links').select([(key, row.value['source'])]):
                 bot.pipe('attachment preview').download(update={'source': row.value})
 
-    bot.pipe('attachment preview').export('data/vilnius/vtaryba/attachments.csv', include=['key', 'size'], update={
+    with bot.pipe('attachment links'):
+        bot.pipe('attachments').download(update={'question-url': row.value['question-url']})
+
+    bot.pipe('attachment preview').export('data/vilnius/vtaryba/attachment-previews.csv', include=['key', 'size'], update={
         'size': row.value['content'].length,
     })
+
+    bot.pipe('attachments').export('data/vilnius/vtaryba/attachments.csv', update=attachment_export)
 
     bot.compact()
 
