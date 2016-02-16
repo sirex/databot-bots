@@ -4,6 +4,7 @@ import csv
 import botlib
 import pathlib
 import urllib.parse
+import cgi
 
 from databot import call, row
 from subprocess import check_call, check_output
@@ -60,10 +61,22 @@ def clean_redirect_url(value):
 
 
 def attachment_export(item):
+    try:
+        content_disposition = item.value['headers']['Content-Disposition']
+    except KeyError:
+        filename = None
+        ext = None
+    else:
+        disposition, params = cgi.parse_header(content_disposition)
+        filename = params.get('filename')
+        ext = pathlib.Path(filename).suffix if filename else None
     return {
         'attachment-url': item.key,
         'question-url': item.value['question-url'],
         'size': len(item.value['content']),
+        'filename': filename,
+        'ext': ext,
+        'content-type': item.value['headers'].get('Content-Type'),
     }
 
 
