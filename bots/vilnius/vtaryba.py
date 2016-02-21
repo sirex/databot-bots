@@ -117,7 +117,7 @@ def run(bot):
     with bot.pipe('attachment links'):
         bot.pipe('attachments').download(update={'question-url': row.value['question-url']})
 
-    bot.pipe('attachment preview').export('data/vilnius/vtaryba/attachment-previews.csv', include=['key', 'size'], update={
+    bot.pipe('attachment preview').export('data/vilnius/vtaryba/attachment-previews.csv', include=['key', 'size', 'source'], update={
         'size': row.value['content'].length,
     })
 
