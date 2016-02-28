@@ -2,16 +2,14 @@
 
 import botlib
 
+from databot import row, call, strip
+
 
 def define(bot):
     bot.define('posėdžių-puslapiai', botlib.dburi('lrs/balsavimai'))
     bot.define('stenogramų-sąrašas')
     bot.define('stenogramų-puslapiai')
-    # bot.define('klausimų-puslapiai')
-    # bot.define('balsavimų-sąrašas')
-    # bot.define('balsavimų-puslapiai')
-    # bot.define('registracijos-sąrašas')
-    # bot.define('registracijos-puslapiai')
+    bot.define('metadata')
 
 
 def run(bot):
@@ -20,6 +18,19 @@ def run(bot):
             '.fakt_pos ul.list > li xpath:a[text()="Stenograma"]/@href'
         ]).dedup():
             bot.pipe('stenogramų-puslapiai').download()
+
+    with bot.pipe('stenogramų-puslapiai'):
+        bot.pipe('metadata').select(row.key, call(dict, ['.basic .ltb', (strip(':text'), strip('b:text?'))])).dedup()
+
+    bot.pipe('metadata').export('data/lrs/stenogramos/metadata.csv', include=[
+        'key',
+        'Data:',
+        'Rūšis:',
+        'Kalba:',
+        'Numeris:',
+    ])
+
+    bot.compact()
 
 
 if __name__ == '__main__':
