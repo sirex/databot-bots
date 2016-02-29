@@ -14,9 +14,7 @@ def define(bot):
 
 def run(bot):
     with bot.pipe('posėdžių-puslapiai'):
-        with bot.pipe('stenogramų-sąrašas').select([
-            '.fakt_pos ul.list > li xpath:a[text()="Stenograma"]/@href'
-        ]).dedup():
+        with bot.pipe('stenogramų-sąrašas').select(['.fakt_pos ul.list > li xpath:a[text()="Stenograma"]/@href']).dedup():
             bot.pipe('stenogramų-puslapiai').download()
 
     with bot.pipe('stenogramų-puslapiai'):
