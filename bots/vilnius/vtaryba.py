@@ -105,6 +105,8 @@ def run(bot):
                 '.info_table a.downloadLink', ('@href', {
                     'link-title': 'b:text',
                     'question-url': row.key,
+                    'date': 'xpath:./ancestor::table//tr[contains(th/text(), "Posėdžio data")]/td/text()',
+                    'status': 'xpath:./ancestor::table//tr[contains(th/text(), "Būsena")]/td/text()',
                 })
             ])
 
@@ -115,7 +117,11 @@ def run(bot):
                 bot.pipe('attachment preview').download(update={'source': row.value})
 
     with bot.pipe('attachment links'):
-        bot.pipe('attachments').download(update={'question-url': row.value['question-url']})
+        bot.pipe('attachments').download(update={
+            'question-url': row.value['question-url'],
+            'date': row.value['date'],
+            'status': row.value['status'],
+        })
 
     bot.pipe('attachment preview').export('data/vilnius/vtaryba/attachment-previews.csv', include=['key', 'size', 'source'], update={
         'size': row.value['content'].length,

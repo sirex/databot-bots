@@ -4,3 +4,4 @@
 .ropeproject
 .coverage
 .cache
+.ipynb_checkpoints/
