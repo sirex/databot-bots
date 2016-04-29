@@ -12,6 +12,7 @@ def define(bot):
     bot.define('susijusių-dokumentų-sąrašas')
     bot.define('susijusių-dokumentų-puslapiai')
     bot.define('metadata')
+    bot.define('texts')
 
 
 def run(bot):
@@ -29,6 +30,9 @@ def run(bot):
     with bot.pipe('dokumentų-puslapiai'):
         bot.pipe('metadata').select(row.key, call(dict, ['.basic .ltb', (strip(':text'), strip('b:text?'))])).dedup()
 
+    with bot.pipe('dokumentų-puslapiai'):
+        bot.pipe('texts').select(row.key, 'body > div:content').dedup()
+
     bot.pipe('metadata').export('data/lrs/dokumentai/metadata.csv', include=[
         'key',
         'Data:',
@@ -36,6 +40,11 @@ def run(bot):
         'Kalba:',
         'Numeris:',
         'Statusas:',
+    ])
+
+    bot.pipe('texts').export('data/lrs/dokumentai/texts.csv', include=[
+        'key',
+        'value',
     ])
 
     bot.compact()
