@@ -15,13 +15,12 @@ def get_bot_module(path):
         raise ValueError("Path '%s' does not exists." % module_path)
 
 
-def dburi(path):
+def dburi(path, create=False):
     db_path = pathlib.Path('data', '%s.db' % path)
-    if db_path.exists():
+    if create or db_path.exists():
         return 'sqlite:///data/%s.db' % path
     else:
         raise ValueError("Path '%s' does not exists." % db_path)
-
 
 
 def getbot(path):
