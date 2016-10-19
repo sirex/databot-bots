@@ -19,13 +19,11 @@ def define(bot):
 
 
 def run(bot):
+    cookies = {
+        'incap_ses_473_791905': 'Jb8dGqFDdxX6QoB+BW+QBhiQB1gAAAAANmzNwNFdVgbtgumFNyY5QA==',
+    }
 
-    start_urls = [
-        'http://www.lrs.lt/sip/portal.show?p_r=15275&p_k=1',
-    ]
-
-    with bot.pipe('pradžios-nuorodos').append(start_urls):
-        bot.pipe('pradžios-puslapiai').download()
+    bot.pipe('pradžios-puslapiai').download('http://www.lrs.lt/sip/portal.show?p_r=15275&p_k=1', cookies=cookies)
 
     # Always download last session page to get all new sessions
     for key, value in sorted(bot.pipe('sesijų-sąrašas').data.items(), key=lambda x: x[1]['pradžia'], reverse=True):
@@ -33,7 +31,7 @@ def run(bot):
         break
 
     with bot.pipe('pradžios-puslapiai'):
-        with bot.pipe('sesijų-sąrašas').select([
+        bot.pipe('sesijų-sąrašas').select([
             '#page-content .tbl-default xpath:tr[count(td)=3]', (
                 'td[1] > a.link@href', {
                     'url': 'td[1] > a.link@href',
@@ -42,8 +40,10 @@ def run(bot):
                     'pabaiga': 'td[3]:text',
                 },
             ),
-        ]).dedup():
-            bot.pipe('sesijų-puslapiai').download()
+        ])
+
+    with bot.pipe('sesijų-sąrašas').dedup():
+        bot.pipe('sesijų-puslapiai').download(cookies=cookies)
 
     with bot.pipe('sesijų-puslapiai'):
         with bot.pipe('posėdžių-sąrašas').select([
@@ -57,7 +57,7 @@ def run(bot):
                 },
             ),
         ]).dedup():
-            bot.pipe('posėdžių-puslapiai').download()
+            bot.pipe('posėdžių-puslapiai').download(cookies=cookies)
 
     with bot.pipe('posėdžių-puslapiai').dedup():
         with bot.pipe('klausimų-sąrašas').select([
@@ -71,19 +71,19 @@ def run(bot):
                 },
             ),
         ]).dedup():
-            bot.pipe('klausimų-puslapiai').download()
+            bot.pipe('klausimų-puslapiai').download(cookies=cookies)
 
     with bot.pipe('klausimų-puslapiai').dedup():
         with bot.pipe('balsavimų-sąrašas').select([
             '.sale_svarst_eiga tr td[2] xpath:a[text()="balsavimas"]', '@href'
         ]).dedup():
-            bot.pipe('balsavimų-puslapiai').download()
+            bot.pipe('balsavimų-puslapiai').download(cookies=cookies)
 
     with bot.pipe('klausimų-puslapiai').dedup():
         with bot.pipe('registracijos-sąrašas').select([
             '.sale_svarst_eiga tr td[2] xpath:a[text()="registracija"]', '@href'
         ]).dedup():
-            bot.pipe('registracijos-puslapiai').download()
+            bot.pipe('registracijos-puslapiai').download(cookies=cookies)
 
     bot.compact()
 

@@ -15,7 +15,7 @@ def _rsync(args):
         '.ipynb_checkpoints/',
         'vtaryba-git/',
     ]]
-    return ['rsync', dry_run, '-avi', '--human-readable', '--progress', delete] + exclude
+    return ['rsync', dry_run, '-avi', '--human-readable', '--progress', '--compress', delete] + exclude
 
 
 def push(args):
