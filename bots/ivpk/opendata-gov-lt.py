@@ -40,7 +40,7 @@ def run(bot):
 
     bot.compact()
 
-    bot.pipe('datasets').export('data/ivpk/opendata-gov-lt/datasets.csv')
+    bot.pipe('datasets').export('data/ivpk/opendata-gov-lt/datasets.jsonl')
 
 
 if __name__ == '__main__':
