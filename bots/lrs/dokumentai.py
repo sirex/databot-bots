@@ -8,9 +8,9 @@ from databot import row, call, strip
 def define(bot):
     bot.define('klausimų-puslapiai', botlib.dburi('lrs/balsavimai'))
     bot.define('dokumentų-sąrašas')
-    bot.define('dokumentų-puslapiai')
+    bot.define('dokumentų-puslapiai', compress=True)
     bot.define('susijusių-dokumentų-sąrašas')
-    bot.define('susijusių-dokumentų-puslapiai')
+    bot.define('susijusių-dokumentų-puslapiai', compress=True)
     bot.define('metadata')
     bot.define('texts')
 

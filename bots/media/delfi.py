@@ -5,11 +5,11 @@ import databot
 
 
 def define(bot):
-    bot.define('archyvas', botlib.dburi('media/delfi/archyvas', create=True))
+    bot.define('archyvas', botlib.dburi('media/delfi/archyvas', create=True), compress=True)
     bot.define('archyvo-nuorodos')
     bot.define('archyvo-straipsnių-nuorodos')
-    bot.define('straipsniai', botlib.dburi('media/delfi/straipsniai', create=True))
-    bot.define('straipsnių-tekstai')
+    bot.define('straipsniai', botlib.dburi('media/delfi/straipsniai', create=True), compress=True)
+    bot.define('straipsnių-tekstai', compress=True)
 
 
 def init(bot):

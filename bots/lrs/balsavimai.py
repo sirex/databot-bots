@@ -5,17 +5,17 @@ import botlib
 
 def define(bot):
     bot.define('pradžios-nuorodos')
-    bot.define('pradžios-puslapiai')
+    bot.define('pradžios-puslapiai', compress=True)
     bot.define('sesijų-sąrašas')
-    bot.define('sesijų-puslapiai')
+    bot.define('sesijų-puslapiai', compress=True)
     bot.define('posėdžių-sąrašas')
-    bot.define('posėdžių-puslapiai')
+    bot.define('posėdžių-puslapiai', compress=True)
     bot.define('klausimų-sąrašas')
-    bot.define('klausimų-puslapiai')
+    bot.define('klausimų-puslapiai', compress=True)
     bot.define('balsavimų-sąrašas')
-    bot.define('balsavimų-puslapiai')
+    bot.define('balsavimų-puslapiai', compress=True)
     bot.define('registracijos-sąrašas')
-    bot.define('registracijos-puslapiai')
+    bot.define('registracijos-puslapiai', compress=True)
 
 
 def run(bot):
