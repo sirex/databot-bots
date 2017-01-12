@@ -2,7 +2,7 @@
 
 import botlib
 
-from databot import row, call, strip
+from databot import this, select
 
 
 def define(bot):
@@ -18,7 +18,10 @@ def run(bot):
             bot.pipe('stenogramų-puslapiai').download()
 
     with bot.pipe('stenogramų-puslapiai'):
-        bot.pipe('metadata').select(row.key, call(dict, ['.basic .ltb', (strip(':text'), strip('b:text?'))])).dedup()
+        bot.pipe('metadata').select(this.key, select([
+            '.basic .ltb',
+            (select(':text').strip(), select('b:text?').strip()),
+        ]).cast(dict)).dedup()
 
     bot.pipe('metadata').export('data/lrs/stenogramos/metadata.csv', include=[
         'key',
