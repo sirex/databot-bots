@@ -5,7 +5,7 @@ import uuid
 import tqdm
 import botlib
 
-from databot import call
+from databot import call, task, select
 
 import selenium.common
 import selenium.webdriver
@@ -117,6 +117,27 @@ def run(bot):
                 )
             ]),
         })
+
+
+pipeline = {
+    'pipes': [
+        define('index pages'),
+        define('data'),
+    ],
+    'tasks': [
+        task('index pages').call(extract_archive_pages, range(1812, 1921, 5)).clean().reset(),
+        task('index pages', 'data').select('.inventoryLabel:text', {
+            'fondas': '.upperHierarchyTreeInner xpath:a[1]/text()',
+            'apyrašas': '.upperHierarchyTreeInner xpath:a[2]/text()',
+            'data': select([
+                '.inventoryBaseDataTable tr', (
+                    'td[1]:content',
+                    'td[2]:content',
+                )
+            ]).cast(dict),
+        }),
+    ],
+}
 
 
 if __name__ == '__main__':
