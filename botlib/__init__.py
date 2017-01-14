@@ -36,7 +36,7 @@ def getbot(path):
         raise ValueError("Path '%s' does not exists." % db_path)
 
 
-def runbot(define, run):
+def runbot(pipeline):
     """Automatically sets database to Sqlite file that matches script path.
 
     Example how script path will be converted to sqlite uri:
@@ -46,4 +46,4 @@ def runbot(define, run):
     """
     path = pathlib.Path('data', *pathlib.Path(sys.argv[0]).with_suffix('.db').parts[1:])
     dburi = 'sqlite:///%s' % path
-    return databot.Bot(dburi).main(define, run)
+    return databot.Bot(dburi).main(pipeline)
