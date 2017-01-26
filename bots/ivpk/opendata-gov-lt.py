@@ -3,7 +3,7 @@
 import botlib
 
 from datetime import timedelta
-from databot import define, task, this, strip
+from databot import define, task, this, select
 
 
 pipeline = {
@@ -18,15 +18,15 @@ pipeline = {
     'tasks': [
         task('index urls').clean(timedelta(days=1)),
         task('index urls').append('http://opendata.gov.lt/index.php?vars=/public/public/search').dedup(),
-        task('index urls', 'index pages').download(),
-        task('index pages', 'index urls').select(['td > a.path@href']).dedup(),
-        task('index pages', 'dataset urls').reset().select(['form[name=frm] > table > tr > td[3] > a@href']),
+        task('index urls', 'index pages', watch=True).download(),
+        task('index pages', 'index urls', watch=True).select(['td > a.path@href']).dedup(),
+        task('index pages', 'dataset urls').select(['form[name=frm] > table > tr > td[3] > a@href']),
         task('dataset urls').clean(timedelta(days=7)).dedup(),
         task('dataset urls', 'dataset pages').download(),
         task('dataset pages', 'dataset data').select(this.key, [
             'table xpath:tr[count(td)=2]', (
                 'td[1]:content',
-                strip('td[2]:content'),
+                select('td[2]:content').strip(),
             )
         ]),
         task('dataset data').clean(timedelta(days=7)).dedup(),
