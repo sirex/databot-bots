@@ -16,8 +16,7 @@ pipeline = {
         define('datasets'),
     ],
     'tasks': [
-        task('index urls').clean(timedelta(days=1)),
-        task('index urls').append('http://opendata.gov.lt/index.php?vars=/public/public/search').dedup(),
+        task('index urls').daily().append('http://opendata.gov.lt/index.php?vars=/public/public/search'),
         task('index urls', 'index pages', watch=True).download(),
         task('index pages', 'index urls', watch=True).select(['td > a.path@href']).dedup(),
         task('index pages', 'dataset urls').select(['form[name=frm] > table > tr > td[3] > a@href']),
