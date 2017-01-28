@@ -6,8 +6,7 @@ from databot import define, task, this
 
 
 cookies = {
-    'incap_ses_473_791905': 'ufG9AaD4RXtatkliKG+QBrTFjFgAAAAATaho8h12YjOS7ZAL0Bmq1g==',
-    'visid_incap_791905': '7Kok4JMCTYS2dfoJzIq6sFbja1cAAAAAQUIPAAAAAADogy7RIfk8/eiNbWGGzDHM',
+    'incap_ses_473_791905': 'EsaEPDtyxQIZ57piKG+QBgMkjVgAAAAAMKUg3pAI/C7fW37p5qe1qA==',
 }
 
 pipeline = {
@@ -26,7 +25,7 @@ pipeline = {
     ],
     'tasks': [
         # Pirmas puslapis
-        task('pradžios-puslapiai').
+        task('pradžios-puslapiai').daily().
         download('http://www.lrs.lt/sip/portal.show?p_r=15275&p_k=1', cookies=cookies),
 
         # Sesijų sąrašas
@@ -75,18 +74,16 @@ pipeline = {
         ]).dedup(),
         task('klausimų-sąrašas', 'klausimų-puslapiai').download(cookies=cookies),
 
-        # Balsavimų sąrašas
+        # Darbotvarkės klausimas (balsavimai)
         task('klausimų-puslapiai', 'balsavimų-sąrašas').select([
             '.sale_svarst_eiga tr td[2] xpath:a[text()="balsavimas"]', '@href'
-        ]).dedup(),
+        ], check='xpath://h1[contains(text(), "Darbotvarkės klausimas")]/text()').dedup(),
         task('balsavimų-sąrašas', 'balsavimų-puslapiai').download(cookies=cookies),
 
-        # Balsavimo rezultatai
-        task('balsavimų-puslapiai', 'registracijos-sąrašas').select([
+        # Darbotvarkės klausimas (registracijos)
+        task('klausimų-puslapiai', 'registracijos-sąrašas').select([
             '.sale_svarst_eiga tr td[2] xpath:a[text()="registracija"]', '@href'
-        ]).dedup(),
-
-        # Registracijos puslapiai
+        ], check='xpath://h1[contains(text(), "Darbotvarkės klausimas")]/text()').dedup(),
         task('registracijos-sąrašas', 'registracijos-puslapiai').download(cookies=cookies),
     ],
 }
