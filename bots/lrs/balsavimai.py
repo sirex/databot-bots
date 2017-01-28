@@ -2,36 +2,35 @@
 
 import botlib
 
-
-def define(bot):
-    bot.define('pradžios-nuorodos')
-    bot.define('pradžios-puslapiai', compress=True)
-    bot.define('sesijų-sąrašas')
-    bot.define('sesijų-puslapiai', compress=True)
-    bot.define('posėdžių-sąrašas')
-    bot.define('posėdžių-puslapiai', compress=True)
-    bot.define('klausimų-sąrašas')
-    bot.define('klausimų-puslapiai', compress=True)
-    bot.define('balsavimų-sąrašas')
-    bot.define('balsavimų-puslapiai', compress=True)
-    bot.define('registracijos-sąrašas')
-    bot.define('registracijos-puslapiai', compress=True)
+from databot import define, task, this
 
 
-def run(bot):
-    cookies = {
-        'incap_ses_473_791905': 'Jb8dGqFDdxX6QoB+BW+QBhiQB1gAAAAANmzNwNFdVgbtgumFNyY5QA==',
-    }
+cookies = {
+    'incap_ses_473_791905': 'ufG9AaD4RXtatkliKG+QBrTFjFgAAAAATaho8h12YjOS7ZAL0Bmq1g==',
+    'visid_incap_791905': '7Kok4JMCTYS2dfoJzIq6sFbja1cAAAAAQUIPAAAAAADogy7RIfk8/eiNbWGGzDHM',
+}
 
-    bot.pipe('pradžios-puslapiai').download('http://www.lrs.lt/sip/portal.show?p_r=15275&p_k=1', cookies=cookies)
+pipeline = {
+    'pipes': [
+        define('pradžios-puslapiai', compress=True),
+        define('sesijų-sąrašas'),
+        define('sesijų-puslapiai', compress=True),
+        define('posėdžių-sąrašas'),
+        define('posėdžių-puslapiai', compress=True),
+        define('klausimų-sąrašas'),
+        define('klausimų-puslapiai', compress=True),
+        define('balsavimų-sąrašas'),
+        define('balsavimų-puslapiai', compress=True),
+        define('registracijos-sąrašas'),
+        define('registracijos-puslapiai', compress=True),
+    ],
+    'tasks': [
+        # Pirmas puslapis
+        task('pradžios-puslapiai').
+        download('http://www.lrs.lt/sip/portal.show?p_r=15275&p_k=1', cookies=cookies),
 
-    # Always download last session page to get all new sessions
-    for key, value in sorted(bot.pipe('sesijų-sąrašas').data.items(), key=lambda x: x[1]['pradžia'], reverse=True):
-        bot.pipe('sesijų-sąrašas').append(key, value).compact()
-        break
-
-    with bot.pipe('pradžios-puslapiai'):
-        bot.pipe('sesijų-sąrašas').select([
+        # Sesijų sąrašas
+        task('pradžios-puslapiai', 'sesijų-sąrašas').select([
             '#page-content .tbl-default xpath:tr[count(td)=3]', (
                 'td[1] > a.link@href', {
                     'url': 'td[1] > a.link@href',
@@ -40,13 +39,16 @@ def run(bot):
                     'pabaiga': 'td[3]:text',
                 },
             ),
-        ])
+        ]).dedup(),
+        task('sesijų-sąrašas', 'sesijų-puslapiai').download(cookies=cookies),
 
-    with bot.pipe('sesijų-sąrašas').dedup():
-        bot.pipe('sesijų-puslapiai').download(cookies=cookies)
+        # Paskutinė sesija
+        # Visada siunčiam paskutinę sisiją, kadangi ten gali būti naujų posėdžių.
+        task('sesijų-sąrašas', 'sesijų-sąrašas').daily().max(this.value['pradžia']),
+        task('sesijų-sąrašas', 'sesijų-puslapiai').download(cookies=cookies),
 
-    with bot.pipe('sesijų-puslapiai'):
-        with bot.pipe('posėdžių-sąrašas').select([
+        # Posėdžių sąrašas
+        task('sesijų-puslapiai', 'posėdžių-sąrašas').select([
             '#page-content .tbl-default xpath:tr[count(td)=4]/td[2]/a', (
                 '@href', {
                     'url': '@href',
@@ -56,11 +58,11 @@ def run(bot):
                     'priimti projektai': 'xpath:../../td[4]/a/@href',
                 },
             ),
-        ]).dedup():
-            bot.pipe('posėdžių-puslapiai').download(cookies=cookies)
+        ]).dedup(),
+        task('posėdžių-sąrašas', 'posėdžių-puslapiai').download(cookies=cookies),
 
-    with bot.pipe('posėdžių-puslapiai').dedup():
-        with bot.pipe('klausimų-sąrašas').select([
+        # Svarstytų klausimų sąrašas
+        task('posėdžių-puslapiai', 'klausimų-sąrašas').select([
             '#page-content .tbl-default xpath:tr[count(td)=3]', (
                 'td[3] > a@href', {
                     'url': 'td[3] > a@href',
@@ -70,23 +72,25 @@ def run(bot):
                     'tipas': 'xpath:td[3]/text()?',
                 },
             ),
-        ]).dedup():
-            bot.pipe('klausimų-puslapiai').download(cookies=cookies)
+        ]).dedup(),
+        task('klausimų-sąrašas', 'klausimų-puslapiai').download(cookies=cookies),
 
-    with bot.pipe('klausimų-puslapiai').dedup():
-        with bot.pipe('balsavimų-sąrašas').select([
+        # Balsavimų sąrašas
+        task('klausimų-puslapiai', 'balsavimų-sąrašas').select([
             '.sale_svarst_eiga tr td[2] xpath:a[text()="balsavimas"]', '@href'
-        ]).dedup():
-            bot.pipe('balsavimų-puslapiai').download(cookies=cookies)
+        ]).dedup(),
+        task('balsavimų-sąrašas', 'balsavimų-puslapiai').download(cookies=cookies),
 
-    with bot.pipe('klausimų-puslapiai').dedup():
-        with bot.pipe('registracijos-sąrašas').select([
+        # Balsavimo rezultatai
+        task('balsavimų-puslapiai', 'registracijos-sąrašas').select([
             '.sale_svarst_eiga tr td[2] xpath:a[text()="registracija"]', '@href'
-        ]).dedup():
-            bot.pipe('registracijos-puslapiai').download(cookies=cookies)
+        ]).dedup(),
 
-    bot.compact()
+        # Registracijos puslapiai
+        task('registracijos-sąrašas', 'registracijos-puslapiai').download(cookies=cookies),
+    ],
+}
 
 
 if __name__ == '__main__':
-    botlib.runbot(define, run)
+    botlib.runbot(pipeline)
