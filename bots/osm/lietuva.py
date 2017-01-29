@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-import pathlib
-import funcy
 import botlib
-import subprocess
 import sqlalchemy as sa
 import geoalchemy2  # noqa
+
+from databot import define, task
 
 
 def query_places():
@@ -75,65 +74,32 @@ def query_places():
         yield data['osm_id'], data
 
 
-def define(bot):
-    bot.define('places')
-
-
-def run(bot):
-    path = pathlib.Path('data/osm')
-    source = 'http://download.gisgraphy.com/openstreetmap/pbf/LT.tar.bz2'
-    output = path / 'LT.tar.gz2'
-
-    bot.output.info('Downloading %s' % source)
-    http_code = subprocess.check_output(funcy.flatten([
-        'curl', source,
-        ['--time-cond', str(output)] if output.exists() else [],
-        '--output', str(output),
-        '--location',
-        '--silent',
-        '--write-out', '%{http_code}',
-    ]))
-
-    http_code = http_code.decode()
-
-    if http_code == '200':
-        bot.output.info('Extracting %s' % output)
-        subprocess.check_call(['tar', '--directory', str(output.parent), '-xjf', str(output)])
-
-        # https://github.com/openstreetmap/osm2pgsql#usage
-        subprocess.check_call([
-            'osm2pgsql',
-            '--create',
-            '--database', 'lietuva',
-            '--style', str(path / 'lietuva.style'),
-            '--input-reader', 'pbf',
-            'data/osm/LT',
-        ])
-
-        bot.output.info('Query places')
-        bot.pipe('places').clean().append(query_places(), progress='places')
-
-        csv_output_path = path / 'places.csv'
-        bot.output.info('Export places to %s' % csv_output_path)
-        bot.pipe('places').export(str(csv_output_path), include=[
-            'osm_id',
-            'type',
-            'place',
-            'population',
-            'wikipedia_title',
-            'wikipedia_lang',
-            'lon',
-            'lat',
-            'admin_level_6_osm_id',
-            'admin_level_6',
-            'admin_level_5_osm_id',
-            'admin_level_5',
-            'admin_level_4_osm_id',
-            'admin_level_4',
-        ])
-
-        bot.compact()
+def main():
+    botlib.runbot({
+        'pipes': [
+            define('places'),
+        ],
+        'tasks': [
+            task('places').daily().clean().append(query_places(), progress='places'),
+            task('places').export('data/osm/places.csv', include=[
+                'osm_id',
+                'type',
+                'place',
+                'population',
+                'wikipedia_title',
+                'wikipedia_lang',
+                'lon',
+                'lat',
+                'admin_level_6_osm_id',
+                'admin_level_6',
+                'admin_level_5_osm_id',
+                'admin_level_5',
+                'admin_level_4_osm_id',
+                'admin_level_4',
+            ])
+        ],
+    })
 
 
 if __name__ == '__main__':
-    botlib.runbot(define, run)
+    main()
