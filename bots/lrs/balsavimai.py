@@ -6,6 +6,16 @@ from databot import define, task, this
 
 
 cookies = {
+    # Norint apeiti Incapsula apsaugą, reikia naršyklėje suvesti
+    # paveiksliuke rodomą apsaugos kodą ir nusikopijuoti incap_ses_*
+    # sausainiukus.
+    #
+    # Leidžians skriptą serveryje, naržyklę reikia leisti per serverio
+    # proxy. Serverio SOCS proxy galima įjungti taip:
+    #
+    #   ssh -D 8080 remote-server
+    #
+    # SOCKS proxy nustatymai naršyklėje: 127.0.0.1:8080
     'incap_ses_473_791905': 'EsaEPDtyxQIZ57piKG+QBgMkjVgAAAAAMKUg3pAI/C7fW37p5qe1qA==',
 }
 
