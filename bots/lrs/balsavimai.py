@@ -67,7 +67,7 @@ pipeline = {
                     'priimti projektai': 'xpath:../../td[4]/a/@href',
                 },
             ),
-        ]).dedup(),
+        ], check='.fakt_pos > .list.main li > a').dedup(),
         task('posėdžių-sąrašas', 'posėdžių-puslapiai').download(cookies=cookies),
 
         # Svarstytų klausimų sąrašas
