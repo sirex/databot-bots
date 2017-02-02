@@ -40,10 +40,11 @@ pipeline = {
             '.fakt_pos ul.list > li xpath:a[text()="Stenograma"]/@href',
             check='.fakt_pos > .list.main li > a',
         ).dedup(),
-        task('stenogramų-sąrašas', 'stenogramų-puslapiai').download(),
+        task('stenogramų-sąrašas', 'stenogramų-puslapiai').download(cookies=cookies),
 
         # Stenogramų puslapio meta duomenys
         task('stenogramų-puslapiai', 'metadata').select(this.key, {
+            'url': this.value.url,
             'rūšis': select('.legalActHeaderTable xpath:.//td[text() = "Rūšis:"]/following-sibling::td[1]').text(),
             'dokumento nr.': select('.legalActHeaderTable xpath:.//td[text() = "Dokumento nr.:"]/following-sibling::td[1]').text(),
             'reg. data': select('.legalActHeaderTable xpath:.//td[text() = "Reg. data:"]/following-sibling::td[1]').text(),
