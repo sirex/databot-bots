@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import botlib
 
 from databot import define, task, this
@@ -16,7 +17,11 @@ cookies = {
     #   ssh -D 8080 remote-server
     #
     # SOCKS proxy nustatymai naršyklėje: 127.0.0.1:8080
-    'incap_ses_473_791905': 'EsaEPDtyxQIZ57piKG+QBgMkjVgAAAAAMKUg3pAI/C7fW37p5qe1qA==',
+    #
+    # Before running this bot run:
+    #
+    #   export incap_ses=""
+    'incap_ses_473_791905': os.environ['incap_ses'],
 }
 
 pipeline = {
