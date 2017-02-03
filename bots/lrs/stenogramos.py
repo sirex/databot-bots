@@ -30,7 +30,7 @@ pipeline = {
     'pipes': [
         define('posėdžių-puslapiai', botlib.dburi('lrs/balsavimai')),
         define('stenogramų-sąrašas'),
-        define('stenogramų-puslapiai'),
+        define('stenogramų-puslapiai', compress=True),
         define('metadata'),
     ],
     'tasks': [
