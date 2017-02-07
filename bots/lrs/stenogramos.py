@@ -6,25 +6,8 @@ import botlib
 from databot import define, select, task, this
 
 cookies = {
-    # Norint apeiti Incapsula apsaugą, reikia naršyklėje suvesti
-    # paveiksliuke rodomą apsaugos kodą ir nusikopijuoti incap_ses_*
-    # sausainiukus.
-    #
-    # Leidžians skriptą serveryje, naržyklę reikia leisti per serverio
-    # proxy. Serverio SOCS proxy galima įjungti taip:
-    #
-    #   ssh -D 8080 remote-server
-    #
-    # SOCKS proxy nustatymai naršyklėje: 127.0.0.1:8080
-    #
-    # Before running this bot run:
-    #
-    #   export incap_ses=""
-    'incap_ses_473_791905': os.environ['incap_ses'],
+    'incap_ses_473_791905': os.environ['INCAP_SES'],
 }
-
-# https://e-seimas.lrs.lt/portal/legalAct/lt/TAK/c61cd711d98711e69c5d8175b5879c31
-#                            /rs/legalact/lt/TAK/c61cd711d98711e69c5d8175b5879c31/
 
 pipeline = {
     'pipes': [
