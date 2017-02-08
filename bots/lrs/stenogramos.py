@@ -11,7 +11,7 @@ cookies = {
 
 pipeline = {
     'pipes': [
-        define('posėdžių-puslapiai', botlib.dburi('lrs/balsavimai')),
+        define('posėdžių-puslapiai', botlib.dburi('lrs/posedziai')),
         define('stenogramų-sąrašas'),
         define('stenogramų-puslapiai', compress=True),
         define('metadata'),

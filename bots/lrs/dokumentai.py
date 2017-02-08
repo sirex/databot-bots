@@ -6,7 +6,7 @@ from databot import row, call, strip
 
 
 def define(bot):
-    bot.define('klausimų-puslapiai', botlib.dburi('lrs/balsavimai'))
+    bot.define('klausimų-puslapiai', botlib.dburi('lrs/posedziai'))
     bot.define('dokumentų-sąrašas')
     bot.define('dokumentų-puslapiai', compress=True)
     bot.define('susijusių-dokumentų-sąrašas')
