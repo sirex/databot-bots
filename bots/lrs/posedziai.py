@@ -6,9 +6,8 @@ import botlib
 from databot import define, task, this
 
 
-cookies = {
-    'incap_ses_473_791905': os.environ['INCAP_SES'],
-}
+envvars = {'incap_ses_108_791905', 'incap_ses_473_791905'}
+cookies = {x: os.environ[x] for x in envvars if x in os.environ}
 
 pipeline = {
     'pipes': [

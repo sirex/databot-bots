@@ -15,9 +15,8 @@ def attachment(value):
     return value[0] if value else None
 
 
-cookies = {
-    'incap_ses_473_791905': os.environ['INCAP_SES'],
-}
+envvars = {'incap_ses_108_791905', 'incap_ses_473_791905'}
+cookies = {x: os.environ[x] for x in envvars if x in os.environ}
 
 pipeline = {
     'pipes': [
@@ -25,6 +24,7 @@ pipeline = {
         define('stenogramų-sąrašas'),
         define('stenogramų-puslapiai', compress=True),
         define('metadata'),
+        define('dokumentai', compress=True),
     ],
     'tasks': [
 
@@ -54,6 +54,8 @@ pipeline = {
             'attachment': select(['.centerHeader xpath:./a[contains(@href, "/format/")]/@href']).apply(attachment),
         }),
         task('metadata').export('data/lrs/stenogramos/metadata.csv'),
+
+        task('metadata', 'dokumentai').download(this.value.attachment, cookies=cookies),
     ],
 }
 
