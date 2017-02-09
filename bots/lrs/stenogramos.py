@@ -5,6 +5,16 @@ import botlib
 
 from databot import define, select, task, this
 
+
+def attachment(value):
+    """Select prefered attachment format."""
+    formats = [x.split('/')[-2] for x in value]
+    for x in ('MSO2010_DOCX', 'MSO2003_DOC'):
+        if x in formats:
+            return value[formats.index(x)]
+    return value[0] if value else None
+
+
 cookies = {
     'incap_ses_473_791905': os.environ['INCAP_SES'],
 }
@@ -23,7 +33,9 @@ pipeline = {
             '.fakt_pos ul.list > li xpath:a[text()="Stenograma"]/@href',
             check='.fakt_pos > .list.main li > a',
         ).dedup(),
-        task('stenogramų-sąrašas', 'stenogramų-puslapiai').download(cookies=cookies),
+        task('stenogramų-sąrašas', 'stenogramų-puslapiai').download(cookies=cookies, check=(
+            '.legalActHeaderTable xpath:.//td[text() = "Rūšis:"]'
+        )),
 
         # Stenogramų puslapio meta duomenys
         task('stenogramų-puslapiai', 'metadata').select(this.key, {
@@ -37,7 +49,9 @@ pipeline = {
             'kalba': select('.legalActHeaderTable xpath:.//td[text() = "Kalba:"]/following-sibling::td[1]').text(),
             'būsena': select('.legalActHeaderTable xpath:.//td[text() = "Būsena:"]/following-sibling::td[1]').text(),
             'ryšys su es teisės aktais': select('.legalActHeaderTable xpath:.//td[text() = "Ryšys su ES teisės aktais:"]/following-sibling::td[1]').text(),
-            # 'iframe link': select('.legalActIFrameWrapper'),
+            'html iframe url': select('.docPanel .legalActIFrameWrapper iframe@src?'),
+            'attachments': [select('.centerHeader xpath:./a[contains(@href, "/format/")]/@href')],
+            'attachment': select(['.centerHeader xpath:./a[contains(@href, "/format/")]/@href']).apply(attachment),
         }),
         task('metadata').export('data/lrs/stenogramos/metadata.csv'),
     ],
