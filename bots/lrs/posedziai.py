@@ -22,8 +22,9 @@ pipeline = {
     ],
     'tasks': [
         # Pirmas puslapis
-        task('pradžios-puslapiai').daily().
-        download('http://www.lrs.lt/sip/portal.show?p_r=15275&p_k=1', cookies=cookies),
+        task('pradžios-puslapiai').daily().download(
+            'http://www.lrs.lt/sip/portal.show?p_r=15275&p_k=1', cookies=cookies, check='#page-content h1.page-title'
+        ),
 
         # Sesijų sąrašas
         task('pradžios-puslapiai', 'sesijų-sąrašas').select([
@@ -36,12 +37,12 @@ pipeline = {
                 },
             ),
         ]).dedup(),
-        task('sesijų-sąrašas', 'sesijų-puslapiai').download(cookies=cookies),
+        task('sesijų-sąrašas', 'sesijų-puslapiai').download(cookies=cookies, check='#page-content h1.page-title'),
 
         # Paskutinė sesija
         # Visada siunčiam paskutinę sisiją, kadangi ten gali būti naujų posėdžių.
         task('sesijų-sąrašas', 'sesijų-sąrašas').daily().max(this.value['pradžia']),
-        task('sesijų-sąrašas', 'sesijų-puslapiai').download(cookies=cookies),
+        task('sesijų-sąrašas', 'sesijų-puslapiai').download(cookies=cookies, check='#page-content h1.page-title'),
 
         # Posėdžių sąrašas
         task('sesijų-puslapiai', 'posėdžių-sąrašas').select([
@@ -54,8 +55,8 @@ pipeline = {
                     'priimti projektai': 'xpath:../../td[4]/a/@href',
                 },
             ),
-        ]).dedup(),
-        task('posėdžių-sąrašas', 'posėdžių-puslapiai').download(cookies=cookies),
+        ], check='#page-content h1.page-title').dedup(),
+        task('posėdžių-sąrašas', 'posėdžių-puslapiai').download(cookies=cookies, check='#page-content h1.page-title'),
 
         # Svarstytų klausimų sąrašas
         task('posėdžių-puslapiai', 'klausimų-sąrašas').select([
@@ -69,7 +70,7 @@ pipeline = {
                 },
             ),
         ], check='.fakt_pos > .list.main li > a').dedup(),
-        task('klausimų-sąrašas', 'klausimų-puslapiai').download(cookies=cookies),
+        task('klausimų-sąrašas', 'klausimų-puslapiai').download(cookies=cookies, check='#page-content h1.page-title'),
     ],
 }
 
