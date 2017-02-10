@@ -3,6 +3,9 @@
 import os
 import botlib
 
+from subprocess import run, PIPE
+from tempfile import NamedTemporaryFile
+
 from databot import define, select, task, this
 
 
@@ -15,6 +18,24 @@ def attachment(value):
     return value[0] if value else None
 
 
+def xtodocbook(content, mime):
+    if mime == 'application/msword':
+        return run(['antiword', '-x', 'db', '-'], input=content, stdout=PIPE, check=True).stdout.decode('utf-8')
+    elif mime == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        with NamedTemporaryFile(prefix='databot_', suffix='.docx', delete=False) as f:
+            f.write(content)
+            f.close()
+            try:
+                return (
+                    run(['pandoc', '-s', '-f', 'docx', '-t', 'docbook', f.name], stdout=PIPE, check=True).
+                    stdout.decode('utf-8').replace('\xad', '').replace('\xa0', ' ')
+                )
+            finally:
+                os.remove(f.name)
+    else:
+        raise RuntimeError("Unknown mime type: %r." % mime)
+
+
 envvars = {'incap_ses_108_791905', 'incap_ses_473_791905'}
 cookies = {x: os.environ[x] for x in envvars if x in os.environ}
 
@@ -25,6 +46,7 @@ pipeline = {
         define('stenogramų-puslapiai', compress=True),
         define('metadata'),
         define('dokumentai', compress=True),
+        define('docbook', compress=True),
     ],
     'tasks': [
 
@@ -55,7 +77,15 @@ pipeline = {
         }),
         task('metadata').export('data/lrs/stenogramos/metadata.csv'),
 
+        # Atsisiunčiame prisegtus dokumentų failus (doc, docx formatais)
         task('metadata', 'dokumentai').download(this.value.attachment, cookies=cookies),
+
+        # Convertuojame doc, docx failus į docbook formatą
+        task('dokumentai', 'docbook').select(this.key, {
+            'filename': this.value.headers['Content-Disposition'].header().filename,
+            'mimetype': this.value.headers['Content-Type'].header().value,
+            'docbook': this.value.content.apply(xtodocbook, this.value.headers['Content-Type'].header().value),
+        })
     ],
 }
 
