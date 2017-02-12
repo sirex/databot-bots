@@ -1,6 +1,7 @@
 *.pyc
 *.egg-info
 /data
+/dist
 .ropeproject
 .coverage
 .cache
