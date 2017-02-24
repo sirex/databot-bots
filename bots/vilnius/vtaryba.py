@@ -82,11 +82,11 @@ def attachment_export(item):
 
 def define(bot):
     bot.define('questions')
-    bot.define('question pages')
+    bot.define('question pages', compress=True)
     bot.define('attachment preview links')
-    bot.define('attachment preview')
+    bot.define('attachment preview', compress=True)
     bot.define('attachment links')
-    bot.define('attachments')
+    bot.define('attachments', compress=True)
 
 
 def run(bot):
