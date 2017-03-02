@@ -20,6 +20,10 @@ pipeline = {
             'http://www.lrs.lt/sip/portal.show?p_r=8801&p_k=1&filtertype=0', cookies=cookies, check='.smn-list',
         ),
 
+        task('pirmas-puslapis').monthly().
+            download('http://www.lrs.lt/sip/portal.show?p_r=8801&p_k=1&filtertype=0', cookies=cookies).
+            dtype('content:html', has='.smn-list'),
+
         # Seimo narių sąrašas
         task('pirmas-puslapis', 'sąrašas').select([
             '.smn-list .list-member', (
@@ -32,7 +36,13 @@ pipeline = {
         ]),
 
         # Nuotraukos
-        task('sąrašas', 'nuotraukos').download(this.value.nuotrauka, cookies=cookies)
+        task('sąrašas', 'nuotraukos').
+            download(this.value.nuotrauka, cookies=cookies).
+            dtype('content:image').
+            dtype('oneof', [
+                dtype('content:image'),
+                dtype('content:html', check=this.headers['Content-Type'] == 'text/html'),
+            ])
     ],
 }
 
