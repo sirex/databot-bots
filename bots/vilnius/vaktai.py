@@ -8,9 +8,9 @@ from databot import row
 
 def define(bot):
     bot.define('index urls')
-    bot.define('index pages')
+    bot.define('index pages', compress=True)
     bot.define('doc urls')
-    bot.define('doc pages')
+    bot.define('doc pages', compress=True)
 
 
 def run(bot):
