@@ -8,6 +8,7 @@ setup(
         'databot',
         'gramtool',
         'GeoAlchemy2',
+        'pandas',
     ],
     entry_points={
         'console_scripts': [
