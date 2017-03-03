@@ -44,11 +44,14 @@ pipeline = {
     ],
     'tasks': [
         task('vidurkiai-zip').monthly().download('http://sodra.is.lt/Failai/Vidurkiai.zip'),
+        task('vidurkiai-zip', 'vidurkiai').
+            call(partial(read_csv, 'VIDURKIAI.CSV', 'kodas', ['regnr', 'kodas', 'alga', 'autorine', 'viso'])).
+            dedup(),
         task('skaiciai-zip').monthly().download('http://sodra.is.lt/Failai/Apdraustuju_skaicius.zip'),
         task('skaiciai-zip', 'skaiciai').
             call(partial(read_csv, 'APDRAUSTUJU_SKAICIUS.CSV', 'kodas', ['regnr', 'kodas', 'skaicius'])).
             dedup(),
-        task('skaiciai', 'imones-puslapis').download(
+        task('vidurkiai', 'imones-puslapis').download(
             'https://draudejai.sodra.lt/draudeju_viesi_duomenys/',
             method='POST',
             data={
