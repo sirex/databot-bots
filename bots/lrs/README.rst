@@ -11,6 +11,11 @@ Serverio SOCS proxy galima įjungti taip::
 
 SOCKS proxy nustatymai naršyklėje: ``127.0.0.1:8080``
 
-Before running this bot run::
+Prieš leidžiant bouts reikia sukurti ``settings.yml`` failą, jei tokio dar nėra
+ir įrašyto tokius nustatymus::
 
-    export INCAP_SES=""
+    cookies:
+      www3.lrs.lt:
+        visid_incap_791905: ARedswaWQGCmn94pTD/xMwr6Q1cAAAAAQkIPAAAAAACA/hJ6AVh3Vx6Bzk5JXwcRZS+eWwmh1saP
+        incap_ses_108_791905:
+        incap_ses_473_791905:
