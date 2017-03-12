@@ -27,13 +27,7 @@ MONTHS = {
 
 def date(value):
     spl = value.split()
-    if len(spl) == 1:
-        # 1930
-        return '%s-01-01' % spl[0]
-    if len(spl) == 2:
-        # 1951 m.
-        return '%s-01-01' % spl[0]
-    elif len(spl) == 3:
+    if len(spl) == 3:
         return '-'.join(spl)
     elif len(spl) == 5:
         # 1945 m. balandžio 10 d.
@@ -140,6 +134,12 @@ pipeline = {
 
         # Seimo narių puslapiai
         task('1992/sąrašo-duomenys', '1992/seimo-nario-puslapis').
+        update({
+            # Seimo narių sąrše nuoroda rodo į neegzistuojantį puslapį, tačiau yra kopija kitoje vietoje.
+            'http://www3.lrs.lt/pls/inter/w5_lrs.seimo_narys?p_asm_id=101&p_int_tv_id=0&p_kalb_id=1&p_kade_id=2': {
+                'url': 'http://www3.lrs.lt/docs3/kad2/w5_lrs.seimo_narys-p_asm_id=101&p_int_tv_id=784&p_kalb_id=1&p_kade_id=2.htm',
+            }
+        }).
         download(cookies=cookies['www3.lrs.lt'], check='#SN_pareigos'),
 
         task('1992/seimo-nario-puslapis', '1992/seimo-nario-duomenys').select(this.key, {
@@ -163,7 +163,7 @@ pipeline = {
                 replace('O', '0').                                         # 3O d. -> 30 d.
                 sub(r'[l\d]{2,}', lambda m: m.group().replace('l', '1')).  # l95l m. -> 1951 m.
                 sub(r'(\d+)m.', r'\1 m.').                                 # 1935m. -> 1935 m.
-                re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} m\.|\d{4})').
+                re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.)').
                 apply(date)
             ),
         }),
