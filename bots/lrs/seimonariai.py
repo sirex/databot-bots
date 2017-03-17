@@ -25,15 +25,24 @@ MONTHS = {
 }
 
 
-def date(value):
-    spl = value.split()
+def date(value, p_asm_id=None):
+    spl = value.replace('-', ' ').split()
     if len(spl) == 3:
         return '-'.join(spl)
+    elif len(spl) == 4:
+        # 1945 balandžio 10 d.
+        return '-'.join([spl[0], str(MONTHS[spl[1].lower()]).zfill(2), spl[2].zfill(2)])
     elif len(spl) == 5:
         # 1945 m. balandžio 10 d.
         return '-'.join([spl[0], str(MONTHS[spl[2].lower()]).zfill(2), spl[3].zfill(2)])
     else:
         return value
+
+
+def replace(value, key=None, table=None):
+    if table is None:
+        key, table = value, key
+    return table.get(key, value)
 
 
 def case_split(value):
@@ -91,6 +100,7 @@ pipeline = {
         download(cookies=cookies['www3.lrs.lt'], check='#SN_pareigos'),
 
         task('1990/seimo-nario-puslapis', '1990/seimo-nario-duomenys').select(this.key, {
+            'p_asm_id': this.key.urlparse().query.p_asm_id.cast(int),
             'vardas': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[0],
             'pavardė': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[1],
             'mandatas': {
@@ -134,15 +144,17 @@ pipeline = {
 
         # Seimo narių puslapiai
         task('1992/sąrašo-duomenys', '1992/seimo-nario-puslapis').
-        update({
-            # Seimo narių sąrše nuoroda rodo į neegzistuojantį puslapį, tačiau yra kopija kitoje vietoje.
-            'http://www3.lrs.lt/pls/inter/w5_lrs.seimo_narys?p_asm_id=101&p_int_tv_id=0&p_kalb_id=1&p_kade_id=2': {
-                'url': 'http://www3.lrs.lt/docs3/kad2/w5_lrs.seimo_narys-p_asm_id=101&p_int_tv_id=784&p_kalb_id=1&p_kade_id=2.htm',
-            }
-        }).
-        download(cookies=cookies['www3.lrs.lt'], check='#SN_pareigos'),
+        download(
+            this.key.apply(replace, {
+                # Pakeisti neveikiančias nuorodas alternatyviomis, kurios veikia.
+                'http://www3.lrs.lt/pls/inter/w5_lrs.seimo_narys?p_asm_id=101&p_int_tv_id=0&p_kalb_id=1&p_kade_id=2': 'http://www3.lrs.lt/docs3/kad2/w5_lrs.seimo_narys-p_asm_id=101&p_int_tv_id=784&p_kalb_id=1&p_kade_id=2.htm',
+            }),
+            cookies=cookies['www3.lrs.lt'],
+            check='#SN_pareigos',
+        ),
 
         task('1992/seimo-nario-puslapis', '1992/seimo-nario-duomenys').select(this.key, {
+            'p_asm_id': this.key.urlparse().query.p_asm_id.cast(int),
             'vardas': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[0],
             'pavardė': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[1],
             'mandatas': {
@@ -155,15 +167,50 @@ pipeline = {
             )),
             'iškėlė': select('#SN_pareigos xpath:.//p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
 
-            'nuotrauka': select('#SN_pareigos img@src'),
+            'nuotrauka': select('#SN_pareigos img@src?').apply(replace, this.key.urlparse().query.p_asm_id.cast(int), {
+                # Alternatyvios nuotraukos, jei profilyje nepateika jokia nuotrauka.
+                33: 'http://www7.lrs.lt/photo/ImageData5/bb77707f-e589-43a1-a864-7152d9508544.jpg',  # Arūnas EIGIRDAS
+                105: 'http://www3.lrs.lt/home/images/VISI/janonis%20j.jpg',  # Juozas JANONIS
+            }),
             'biografija': select(['xpath://b[text() = "Biografija"]/ancestor::table[1]']).text().replace('\xad', ''),
             'gimė': (
                 select(['xpath://b[text() = "Biografija"]/ancestor::table[1]']).
                 text().replace('\xad', '').
-                replace('O', '0').                                         # 3O d. -> 30 d.
+                replace('lO', '10').                                       # lO d. -> 10 d.
+                sub(r'[O\d]{2,}', lambda m: m.group().replace('O', '0')).  # 3O d. -> 30 d.
                 sub(r'[l\d]{2,}', lambda m: m.group().replace('l', '1')).  # l95l m. -> 1951 m.
                 sub(r'(\d+)m.', r'\1 m.').                                 # 1935m. -> 1935 m.
-                re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.)').
+                sub(r'(\d+)d.', r'\1 d.').                                 # 15d. -> 15 d.
+                re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
+                apply(replace, this.key.urlparse().query.p_asm_id.cast(int), {
+                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
+                    9: '1951-06-13',  # Vytautas ARBAČIAUSKAS
+                    16: '1943-02-11',  # Julius BEINORTAS
+                    20: '1936-02-01',  # Romualdas Ignas BLOŠKYS
+                    21: '1923-03-04',  # Kazys BOBELIS
+                    22: '1959-01-02',  # Vytautas BOGUŠIS
+                    28: '1939-11-06',  # Virgilijus Vladislovas BULOVAS
+                    29: '1954-05-17',  # Sigita BURBIENĖ
+                    23809: '1940-07-15',  # Vladas BUTĖNAS
+                    32: '1960-05-09',  # Kęstutis DIRGĖLA
+                    267: '1930-02-07',  # Vytautas EINORIS
+                    35: '1926-02-24',  # Balys GAJAUSKAS
+                    49: '1943-03-28',  # Kęstutis GAŠKA
+                    39: '1952-12-02',  # Petras GINIOTAS
+                    122: '1921-07-27',  # Jonas KUBILIUS
+                    123: '1948-01-27',  # Algirdas KUNČINAS
+                    125: '1947-03-07',  # Kazimieras KUZMINSKAS
+                    133: '1954-04-08',  # Rimantas MARKAUSKAS
+                    61: '1940-01-01',  # Kęstutis Povilas PAUKŠTYS
+                    69: '1925-12-05',  # Juras POŽELA
+                    98: '1959-10-15',  # Virmantas VELIKONIS
+                    45: '1950-12-04',  # Vidmantas ŽIEMELIS
+                    203: '1942-01-01',  # Justas Vincas PALECKIS
+                    46: '1909-01-12',  # Juozas BULAVAS
+                    33: '1953-06-11',  # Arūnas EIGIRDAS
+                    105: '1962-05-09',  # Juozas JANONIS
+                    23: '1932-09-22',  # Algirdas Mykolas BRAZAUSKAS
+                }).
                 apply(date)
             ),
         }),
