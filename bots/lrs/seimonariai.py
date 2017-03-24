@@ -84,6 +84,12 @@ pipeline = {
         define('2000/seimo-nario-duomenys'),
         define('2000/seimo-nario-nuotrauka'),
 
+        define('2004/sąrašo-puslapis', compress=True),
+        define('2004/sąrašo-duomenys'),
+        define('2004/seimo-nario-puslapis', compress=True),
+        define('2004/seimo-nario-duomenys'),
+        define('2004/seimo-nario-nuotrauka'),
+
         define('2016/sąrašo-puslapis', compress=True),
         define('2016/sąrašo-duomenys'),
         define('2016/seimo-nario-nuotrauka'),
@@ -368,7 +374,7 @@ pipeline = {
 
 
         # VIII Seimas (2000-2004)
-        # ==-====================
+        # =======================
 
         # Seimo narių sąrašas
         task('2000/sąrašo-puslapis').monthly().download(
@@ -481,7 +487,111 @@ pipeline = {
         }),
 
         # Seimo narių nuotraukos
-        task('2000/seimo-nario-duomenys', '1996/seimo-nario-nuotrauka').download(this.value.nuotrauka),
+        task('2000/seimo-nario-duomenys', '2000/seimo-nario-nuotrauka').download(this.value.nuotrauka),
+
+
+        # IX Seimas (2004-2008)
+        # =====================
+
+        # Seimo narių sąrašas
+        task('2004/sąrašo-puslapis').monthly().download(
+            'http://www3.lrs.lt/docs3/kad5/w5_istorija.show5-p_r=786&p_k=1.html',
+            cookies=cookies['www3.lrs.lt'],
+            check='xpath://div/center/h2[text() = "2004 – 2008 m. SEIMO KADENCIJA"]',
+        ),
+
+        task('2004/sąrašo-puslapis', '2004/sąrašo-duomenys').select([
+            '.turinys xpath:.//table/tr[contains(td//text(), "Vardas,")]/following-sibling::tr', (
+                'xpath:td[2]/a/@href', {
+                    'vardas': select('xpath:td[2]/a/text()[1]'),
+                    'pavardė': select('xpath:td[2]/a/strong/text()'),
+                },
+            ),
+        ]),
+
+        # Seimo narių puslapiai
+        task('2004/sąrašo-duomenys', '2004/seimo-nario-puslapis').download(
+            cookies=cookies['www3.lrs.lt'],
+            check=oneof(
+                '#smain xpath:.//td[b/text() = "Seimo narys "]',
+                '#smain xpath:.//td[b/text() = "Seimo narė "]',
+            ),
+        ),
+
+        task('2004/seimo-nario-puslapis', '2004/seimo-nario-duomenys').select(this.key, {
+            'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+            'vardas': select('#smain xpath:./table[1]//h3/text()').apply(case_split)[0],
+            'pavardė': select('#smain xpath:./table[1]//h3/text()').apply(case_split)[1],
+            'mandatas': {
+                'nuo': select('#smain xpath:.//td/text()[. = " nuo "]/following-sibling::b[1]/text()'),
+                'iki': select('#smain xpath:.//td/text()[. = " iki "]/following-sibling::b[1]/text()'),
+            },
+            'išrinktas': oneof(
+                func()(' '.join)(join(
+                    [select('#smain xpath://td/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
+                    [select('#smain xpath://td/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
+                )),
+                func()(' '.join)(join(
+                    [select('#smain xpath://td/text()[. = "Išrinkta  "]/following-sibling::b[1]/text()').strip()],
+                    [select('#smain xpath://td/text()[. = "Išrinkta  "]/following-sibling::text()[1]').strip()],
+                )),
+            ),
+            'iškėlė': select('#smain xpath://td/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
+            'nuotrauka': select('#smain xpath:table[1]/tr/td/div/img/@src'),
+            'biografija': (
+                select('#smain xpath:div[text() = "Biografija"]/following-sibling::div[1]?').null().
+                text().replace('\xad', '')
+            ),
+            'gimė': (
+                select('#smain xpath:div[text() = "Biografija"]/following-sibling::div[1]?').null().
+                text().replace('\xad', '').
+                re(r'[Gg]im[eė] (%s)' % '|'.join([
+                    r'\d{4} \d{2} \d{2}',
+                    r'\d{4} m\. \w+ \d+ d\.',
+                    r'\d{4} m\. \w+ mėn\. \d+ d\.',
+                    r'\d{4} m\. \w+ \d+ dieną',
+                    r'\d{4} \w+ \d+ d\.',
+                ])).
+                apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
+                    18: '1935-09-08',        # Juozas BERNATONIS
+                    47856: '1967-10-10',     # Saulius BUCEVIČIUS
+                    47844: '1960-01-31',     # Kęstutis DAUKŠYS
+                    23547: '1953-11-18',     # Valentinas MAZURONIS
+                }).
+                apply(date)
+            ),
+            'frakcijos': ['#smain xpath:b[text() = "Seimo frakcijose"]/following-sibling::ul[1]/li', {
+                'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
+                'frakcija': select('a:text'),
+                'url': select('a@href'),
+                'pareigos': select('xpath:.').text().rsplit(',', 1)[1],
+                'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
+                'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
+            }],
+            'narystė': [
+                '#smain xpath:b[%s]/following-sibling::ul[1]/li' % ' or '.join([
+                    'text() = "%s"' % x for x in [
+                        'Seimo komitetuose',
+                        'Seimo komisijose',
+                        'Paralamentinėse grupėse',
+                    ]
+                ]),
+                {
+                    'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                    'url': select('a@href'),
+                    'tipas': select('xpath:../preceding-sibling::b[1]/text()'),
+                    'padalinys': select('a:text'),
+                    'pareigos': select('xpath:.').text().rsplit(',', 1)[1].split('(', 1)[0],
+                    'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
+                    'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
+                },
+            ],
+        }),
+
+        # Seimo narių nuotraukos
+        task('2004/seimo-nario-duomenys', '2004/seimo-nario-nuotrauka').download(this.value.nuotrauka),
 
 
         # # 2016 kadencija
