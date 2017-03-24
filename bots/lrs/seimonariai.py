@@ -35,6 +35,9 @@ def date(value, p_asm_id=None):
     elif len(spl) == 5:
         # 1945 m. balandžio 10 d.
         return '-'.join([spl[0], str(MONTHS[spl[2].lower()]).zfill(2), spl[3].zfill(2)])
+    elif len(spl) == 5:
+        # 1945 m. balandžio mėn 10 d.
+        return '-'.join([spl[0], str(MONTHS[spl[2].lower()]).zfill(2), spl[4].zfill(2)])
     else:
         return value
 
@@ -74,6 +77,12 @@ pipeline = {
         define('1996/seimo-nario-puslapis', compress=True),
         define('1996/seimo-nario-duomenys'),
         define('1996/seimo-nario-nuotrauka'),
+
+        define('2000/sąrašo-puslapis', compress=True),
+        define('2000/sąrašo-duomenys'),
+        define('2000/seimo-nario-puslapis', compress=True),
+        define('2000/seimo-nario-duomenys'),
+        define('2000/seimo-nario-nuotrauka'),
 
         define('2016/sąrašo-puslapis', compress=True),
         define('2016/sąrašo-duomenys'),
@@ -164,7 +173,7 @@ pipeline = {
         ),
 
         task('1992/seimo-nario-puslapis', '1992/seimo-nario-duomenys').select(this.key, {
-            'p_asm_id': this.key.urlparse().query.p_asm_id.cast(int),
+            'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
             'vardas': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[0],
             'pavardė': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[1],
             'mandatas': {
@@ -177,7 +186,7 @@ pipeline = {
             )),
             'iškėlė': select('#SN_pareigos xpath:.//p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
 
-            'nuotrauka': select('#SN_pareigos img@src?').apply(replace, this.key.urlparse().query.p_asm_id.cast(int), {
+            'nuotrauka': select('#SN_pareigos img@src?').apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
                 # Alternatyvios nuotraukos, jei profilyje nepateikta jokia nuotrauka.
                 33: 'http://www7.lrs.lt/photo/ImageData5/bb77707f-e589-43a1-a864-7152d9508544.jpg',  # Arūnas EIGIRDAS
                 105: 'http://www3.lrs.lt/home/images/VISI/janonis%20j.jpg',  # Juozas JANONIS
@@ -192,7 +201,7 @@ pipeline = {
                 sub(r'(\d+)m.', r'\1 m.').                                 # 1935m. -> 1935 m.
                 sub(r'(\d+)d.', r'\1 d.').                                 # 15d. -> 15 d.
                 re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
-                apply(replace, this.key.urlparse().query.p_asm_id.cast(int), {
+                apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
                     # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
                     9: '1951-06-13',      # Vytautas ARBAČIAUSKAS
                     16: '1943-02-11',     # Julius BEINORTAS
@@ -220,6 +229,8 @@ pipeline = {
                     33: '1953-06-11',     # Arūnas EIGIRDAS
                     105: '1962-05-09',    # Juozas JANONIS
                     23: '1932-09-22',     # Algirdas Mykolas BRAZAUSKAS
+                    101: '1941-10-25',    # Romualda HOFERTIENĖ
+                    108: '1945-07-07',    # Leonardas Kęstutis JASKELEVIČIUS
                 }).
                 apply(date)
             ),
@@ -250,8 +261,16 @@ pipeline = {
 
         # Seimo narių puslapiai
         task('1996/sąrašo-duomenys', '1996/seimo-nario-puslapis').download(
+            this.key.apply(replace, {
+                # Pakeisti neveikiančias nuorodas alternatyviomis, kurios veikia.
+                'http://www3.lrs.lt/seimu_istorija/w3_lrs.seimo_narys-p_asm_id=7200&p_int_tv_id=784&p_kalb_id=1&p_kade_id=3.htm':
+                'http://www3.lrs.lt/seimu_istorija/w3_lrs.seimo_narys-p_asm_id=47830&p_int_tv_id=784&p_kalb_id=1&p_kade_id=3.htm',
+            }),
             cookies=cookies['www3.lrs.lt'],
-            check='xpath://td[p/b/text() = "Seimo narys "]',
+            check=oneof(
+                'xpath://td[p/b/text() = "Seimo narys "]',
+                'xpath://td[p/b/text() = "Seimo narė "]',
+            ),
         ),
 
         task('1996/seimo-nario-puslapis', '1996/seimo-nario-duomenys').select(this.key, {
@@ -290,6 +309,8 @@ pipeline = {
                     7247: '1935-03-26',      # Zigmantas POCIUS
                     7219: '1937-10-27',      # Raimundas Leonas RAJECKAS
                     7243: '1926-11-16',      # Romualdas SIKORSKIS
+                    7407: '1952-04-16',      # Danutė ALEKSIŪNIENĖ
+                    178: '1958-01-26',       # Rasa JUKNEVIČIENĖ
                 }).
                 apply(date)
             ),
@@ -344,6 +365,123 @@ pipeline = {
 
         # Seimo narių nuotraukos
         task('1996/seimo-nario-duomenys', '1996/seimo-nario-nuotrauka').download(this.value.nuotrauka),
+
+
+        # VIII Seimas (2000-2004)
+        # ==-====================
+
+        # Seimo narių sąrašas
+        task('2000/sąrašo-puslapis').monthly().download(
+            'http://www3.lrs.lt/docs3/kad4/w3_lrs.seimo_nariu_sarasas-p_kade_id=4&p_kalb_id=1&p_int_tv_id=784.htm',
+            cookies=cookies['www3.lrs.lt'],
+            check='xpath://td[p/b/h2/text()="Seimo narių sąrašas"]',
+        ),
+
+        task('2000/sąrašo-puslapis', '2000/sąrašo-duomenys').select([
+            'xpath://td[p/b/h2/text()="Seimo narių sąrašas"]/ol/li/a', (
+                '@href', oneof(
+                    {
+                        'vardas': select(':text').apply(case_split)[0],
+                        'pavardė': select(':text').apply(case_split)[1],
+                    },
+                    {
+                        'vardas': select('b:text').apply(case_split)[0],
+                        'pavardė': select('b:text').apply(case_split)[1],
+                    },
+                ),
+            )
+        ]),
+
+        # Seimo narių puslapiai
+        task('2000/sąrašo-duomenys', '2000/seimo-nario-puslapis').download(
+            cookies=cookies['www3.lrs.lt'],
+            check=oneof(
+                'xpath://td[p/b/text() = "Seimo narys "]',
+                'xpath://td[p/b/text() = "Seimo narė "]',
+            ),
+        ),
+
+        task('2000/seimo-nario-puslapis', '2000/seimo-nario-duomenys').select(this.key, {
+            'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+            'vardas': select('xpath:.//td/p/b/h2/text()').apply(case_split)[0],
+            'pavardė': select('xpath://td/p/b/h2/text()').apply(case_split)[1],
+            'mandatas': {
+                'nuo': select('xpath://td/p/text()[. = " nuo "]/following-sibling::b[1]/text()').replace(' ', '-'),
+                'iki': select('xpath://td/p/text()[. = " iki "]/following-sibling::b[1]/text()').replace(' ', '-'),
+            },
+            'išrinktas': func()(' '.join)(join(
+                [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
+                [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
+            )),
+            'iškėlė': select('xpath://td/p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
+            'nuotrauka': select('xpath://img[contains(@tppabs, "seimo_nariu_nuotraukos")]/@src'),
+            'biografija': (
+                select('xpath://p[b/text() = "Biografija"]/following-sibling::div[1]?').null().
+                text().replace('\xad', '')
+            ),
+            'gimė': (
+                select('xpath://p[b/text() = "Biografija"]/following-sibling::div[1]?').null().
+                text().replace('\xad', '').
+                re(r'[Gg]im[eė] (%s)' % '|'.join([
+                    r'\d{4} \d{2} \d{2}',
+                    r'\d{4} m\. \w+ \d+ d\.',
+                    r'\d{4} m\. \w+ mėn\. \d+ d\.',
+                    r'\d{4} m\. \w+ \d+ dieną',
+                    r'\d{4} \w+ \d+ d\.',
+                ])).
+                apply(date)
+            ),
+            'narystė': [
+                'xpath://p[b/text() = "Biografija"]/preceding-sibling::ul[1]/li?', oneof(
+                    {
+                        'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'url': select('a@href'),
+                        'padalinys': select('a:text'),
+                        'pareigos': select('xpath:text()[1]').splitlines()[0],
+                        'nuo': (
+                            select('xpath:text()[1]').
+                            splitlines()[1].
+                            replace('\xad', '').
+                            re(r'\d{4} \d{2} \d{2}').
+                            apply(date)
+                        ),
+                        'iki': (
+                            select('xpath:b/text()').
+                            replace('\xad', '').
+                            re(r'\d{4} \d{2} \d{2}').
+                            apply(date)
+                        ),
+                    },
+                    {
+                        'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'url': value(None),
+                        'padalinys': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[0],
+                        'pareigos': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[1],
+                        'nuo': select('xpath:.').text().re(r'nuo (\d{4} \d{2} \d{2})').apply(date),
+                        'iki': select('xpath:.').text().re(r'iki (\d{4} \d{2} \d{2})').apply(date),
+                    },
+                    {
+                        'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'url': value(None),
+                        'padalinys': select('xpath:.').text().rsplit(',', 1)[0],
+                        'pareigos': select('xpath:.').text().rsplit(',', 1)[1],
+                        'nuo': value(None),
+                        'iki': value(None),
+                    },
+                    {
+                        'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'url': value(None),
+                        'padalinys': select('xpath:.').text(),
+                        'pareigos': value(None),
+                        'nuo': value(None),
+                        'iki': value(None),
+                    },
+                ),
+            ],
+        }),
+
+        # Seimo narių nuotraukos
+        task('2000/seimo-nario-duomenys', '1996/seimo-nario-nuotrauka').download(this.value.nuotrauka),
 
 
         # # 2016 kadencija
