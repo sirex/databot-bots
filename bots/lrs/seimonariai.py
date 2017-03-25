@@ -35,7 +35,7 @@ def date(value, p_asm_id=None):
     elif len(spl) == 5:
         # 1945 m. balandžio 10 d.
         return '-'.join([spl[0], str(MONTHS[spl[2].lower()]).zfill(2), spl[3].zfill(2)])
-    elif len(spl) == 5:
+    elif len(spl) == 6:
         # 1945 m. balandžio mėn 10 d.
         return '-'.join([spl[0], str(MONTHS[spl[2].lower()]).zfill(2), spl[4].zfill(2)])
     else:
@@ -175,7 +175,7 @@ pipeline = {
 
         # Seimo narių puslapiai
         task('1992/sąrašo-duomenys', '1992/seimo-nario-puslapis').download(
-            this.key.apply(replace, {
+            this.key.bypass({
                 # Pakeisti neveikiančias nuorodas alternatyviomis, kurios veikia.
                 'http://www3.lrs.lt/pls/inter/w5_lrs.seimo_narys?p_asm_id=101&p_int_tv_id=0&p_kalb_id=1&p_kade_id=2':
                 'http://www3.lrs.lt/docs3/kad2/w5_lrs.seimo_narys-p_asm_id=101&p_int_tv_id=784&p_kalb_id=1&p_kade_id=2.htm',
@@ -198,22 +198,22 @@ pipeline = {
             )),
             'iškėlė': select('#SN_pareigos xpath:.//p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
 
-            'nuotrauka': select('#SN_pareigos img@src?').apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
-                # Alternatyvios nuotraukos, jei profilyje nepateikta jokia nuotrauka.
-                33: 'http://www7.lrs.lt/photo/ImageData5/bb77707f-e589-43a1-a864-7152d9508544.jpg',  # Arūnas EIGIRDAS
-                105: 'http://www3.lrs.lt/home/images/VISI/janonis%20j.jpg',  # Juozas JANONIS
-            }),
-            'biografija': select(['xpath://b[text() = "Biografija"]/ancestor::table[1]']).text().replace('\xad', ''),
+            'nuotrauka': (
+                select('#SN_pareigos img@src?').
+                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                    # Alternatyvios nuotraukos, jei profilyje nepateikta jokia nuotrauka.
+                    33: 'http://www7.lrs.lt/photo/ImageData5/bb77707f-e589-43a1-a864-7152d9508544.jpg',  # Arūnas EIGIRDAS
+                    105: 'http://www3.lrs.lt/home/images/VISI/janonis%20j.jpg',  # Juozas JANONIS
+                }).
+                notnull()
+            ),
+            'biografija': (
+                select('xpath://b[text() = "Biografija"]/ancestor::table[1]?').
+                null().text().replace('\xad', '')
+            ),
             'gimė': (
-                select(['xpath://b[text() = "Biografija"]/ancestor::table[1]']).
-                text().replace('\xad', '').
-                replace('lO', '10').                                       # lO d. -> 10 d.
-                sub(r'[O\d]{2,}', lambda m: m.group().replace('O', '0')).  # 3O d. -> 30 d.
-                sub(r'[l\d]{2,}', lambda m: m.group().replace('l', '1')).  # l95l m. -> 1951 m.
-                sub(r'(\d+)m.', r'\1 m.').                                 # 1935m. -> 1935 m.
-                sub(r'(\d+)d.', r'\1 d.').                                 # 15d. -> 15 d.
-                re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
-                apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                select('xpath://b[text() = "Biografija"]/ancestor::table[1]?').
+                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
                     # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
                     9: '1951-06-13',      # Vytautas ARBAČIAUSKAS
                     16: '1943-02-11',     # Julius BEINORTAS
@@ -244,6 +244,13 @@ pipeline = {
                     101: '1941-10-25',    # Romualda HOFERTIENĖ
                     108: '1945-07-07',    # Leonardas Kęstutis JASKELEVIČIUS
                 }).
+                text().replace('\xad', '').
+                replace('lO', '10').                                       # lO d. -> 10 d.
+                sub(r'[O\d]{2,}', lambda m: m.group().replace('O', '0')).  # 3O d. -> 30 d.
+                sub(r'[l\d]{2,}', lambda m: m.group().replace('l', '1')).  # l95l m. -> 1951 m.
+                sub(r'(\d+)m.', r'\1 m.').                                 # 1935m. -> 1935 m.
+                sub(r'(\d+)d.', r'\1 d.').                                 # 15d. -> 15 d.
+                re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
                 apply(date)
             ),
         }),
@@ -273,15 +280,15 @@ pipeline = {
 
         # Seimo narių puslapiai
         task('1996/sąrašo-duomenys', '1996/seimo-nario-puslapis').download(
-            this.key.apply(replace, {
+            this.key.bypass({
                 # Pakeisti neveikiančias nuorodas alternatyviomis, kurios veikia.
                 'http://www3.lrs.lt/seimu_istorija/w3_lrs.seimo_narys-p_asm_id=7200&p_int_tv_id=784&p_kalb_id=1&p_kade_id=3.htm':
                 'http://www3.lrs.lt/seimu_istorija/w3_lrs.seimo_narys-p_asm_id=47830&p_int_tv_id=784&p_kalb_id=1&p_kade_id=3.htm',
             }),
             cookies=cookies['www3.lrs.lt'],
             check=oneof(
-                'xpath://td[p/b/text() = "Seimo narys "]',
-                'xpath://td[p/b/text() = "Seimo narė "]',
+                select('xpath://td[p/b/text() = "Seimo narys "]'),
+                select('xpath://td[p/b/text() = "Seimo narė "]'),
             ),
         ),
 
@@ -300,20 +307,19 @@ pipeline = {
             'iškėlė': select('xpath://td/p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
             'nuotrauka': (
                 select('xpath://img[contains(@tppabs, "seimo_nariu_nuotraukos")]/@src?').
-                apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
                     # Alternatyvios nuotraukos, jei profilyje nepateikta jokia nuotrauka.
                     7196: 'http://www3.lrs.lt/docs3/kad2/patackas_algirdas.jpg',  # Algirdas Vaclovas PATACKAS
-                })
+                }).
+                notnull()
             ),
             'biografija': (
                 select(['xpath://p[b/text() = "Biografija"]/following-sibling::div[1]']).
                 text().replace('\xad', '')
             ),
             'gimė': (
-                select(['xpath://p[b/text() = "Biografija"]/following-sibling::div[1]']).
-                text().replace('\xad', '').
-                re(r'[Gg]im[eė] (\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
-                apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                select('xpath://p[b/text() = "Biografija"]/following-sibling::div[1]').
+                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
                     # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
                     7197: '1935-03-15',      # Feliksas PALUBINSKAS
                     25261: '1953-06-15',     # Dainius Petras PAUKŠTĖ
@@ -324,6 +330,8 @@ pipeline = {
                     7407: '1952-04-16',      # Danutė ALEKSIŪNIENĖ
                     178: '1958-01-26',       # Rasa JUKNEVIČIENĖ
                 }).
+                text().replace('\xad', '').
+                re(r'[Gg]im[eė] (\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
                 apply(date)
             ),
             'narystė': [
@@ -432,7 +440,21 @@ pipeline = {
                 text().replace('\xad', '')
             ),
             'gimė': (
-                select('xpath://p[b/text() = "Biografija"]/following-sibling::div[1]?').null().
+                select('xpath://p[b/text() = "Biografija"]/following-sibling::div[1]?').
+                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
+                    7229: '1957-05-04',      # Vilija ALEKNAITĖ ABRAMIKIENĖ
+                    26227: '1940-12-17',     # Dobilas Jonas KIRVELIS
+                    47217: '1956-04-13',     # Alfonsas MACAITIS
+                    23841: '1960-12-08',     # Saulius NEFAS
+                    47248: '1963-06-11',     # Ilona STULPINIENĖ
+                    47794: '1964-07-29',     # Gražina ŠMIGELSKIENĖ
+                    23785: '1952-05-16',     # Antanas VALYS
+                    37132: '1930-11-26',     # Vytautas ZABIELA
+                    47811: '1957-03-23',     # Kęstutis MASIULIS
+                    111: '1944-02-16',     # Vytautas JUŠKUS
+                    7208: '1958-01-17',     # Audronius AŽUBALIS
+                }).
                 text().replace('\xad', '').
                 re(r'[Gg]im[eė] (%s)' % '|'.join([
                     r'\d{4} \d{2} \d{2}',
@@ -549,7 +571,29 @@ pipeline = {
                 text().replace('\xad', '')
             ),
             'gimė': (
-                select('#smain xpath:div[text() = "Biografija"]/following-sibling::div[1]?').null().
+                select('#smain xpath:div[text() = "Biografija"]/following-sibling::div[1]?').
+                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
+                    18: '1935-09-08',        # Juozas BERNATONIS
+                    47856: '1967-10-10',     # Saulius BUCEVIČIUS
+                    47844: '1960-01-31',     # Kęstutis DAUKŠYS
+                    23547: '1953-11-18',     # Valentinas MAZURONIS
+                    47846: '1960-03-22',     # Gintautas BUŽINSKAS
+                    7444: '1946-01-08',      # Kęstutis ČILINSKAS
+                    48529: '1941-10-17',     # Algirdas GAIŽUTIS
+                    47855: '1966-06-09',     # Aidas GEDVILAS
+                    48519: '1960-11-05',     # Bronius MARKAUSKAS
+                    47851: '1962-12-04',     # Žilvinas PADAIGA
+                    39605: '1944-07-03',     # Rolandas PAVILIONIS
+                    47831: '1949-04-10',     # Vladimiras PRUDNIKOVAS
+                    47226: '1955-03-31',     # Alvydas RAMANAUSKAS
+                    23279: '1955-04-14',     # Bronis ROPĖ
+                    23760: '1951-01-23',     # Kazys SIVICKIS
+                    48197: '1969-04-04',     # Rytis ŠATKAUSKAS
+                    48533: '1958-04-09',     # Gema UMBRASIENĖ
+                    47204: '1959-07-24',     # Viktor USPASKICH
+                    47857: '1959-07-24',     # Artūras ZUOKAS
+                }).
                 text().replace('\xad', '').
                 re(r'[Gg]im[eė] (%s)' % '|'.join([
                     r'\d{4} \d{2} \d{2}',
@@ -558,13 +602,6 @@ pipeline = {
                     r'\d{4} m\. \w+ \d+ dieną',
                     r'\d{4} \w+ \d+ d\.',
                 ])).
-                apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
-                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
-                    18: '1935-09-08',        # Juozas BERNATONIS
-                    47856: '1967-10-10',     # Saulius BUCEVIČIUS
-                    47844: '1960-01-31',     # Kęstutis DAUKŠYS
-                    23547: '1953-11-18',     # Valentinas MAZURONIS
-                }).
                 apply(date)
             ),
             'frakcijos': ['#smain xpath:b[text() = "Seimo frakcijose"]/following-sibling::ul[1]/li', {
@@ -654,12 +691,20 @@ pipeline = {
             ),
             'gimė': (
                 select('#divDesContent xpath:.//div[text() = "Biografija"]/following-sibling::div[1]?').
-                apply(replace, this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
                     # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
-                    # TODO
-                    # 18: '1935-09-08',        # Juozas BERNATONIS
+                    7404: '1959-04-16',        # Raimundas ALEKNA
+                    47220: '1953-11-16',       # Zigmantas BALČYTIS
+                    7326: '1960-03-03',        # Vilija BLINKEVIČIŪTĖ
+                    47898: '1978-04-15',       # Andrius BURBA
+                    47769: '1941-01-08',       # Juozas IMBRASAS
+                    43989: '1943-08-15',       # Jonas KONDROTAS
+                    47905: '1970-09-11',       # Evaldas LEMENTAUSKAS
+                    39007: '1953-03-27',       # Albinas MITRULEVIČIUS
+                    53928: '1966-01-09',       # Daiva TAMOŠIŪNAITĖ
+                    23705: '1965-03-03',       # Valdemar TOMAŠEVSKI
+                    47204: '1959-07-24',       # Viktor USPASKICH
                 }).
-                null().
                 text().replace('\xad', '').
                 re(r'[Gg]im[eė] (%s)' % '|'.join([
                     r'\d{4}-\d{2}-\d{2}',
