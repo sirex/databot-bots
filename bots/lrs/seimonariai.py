@@ -3,7 +3,7 @@
 import yaml
 import botlib
 
-from itertools import groupby
+from itertools import groupby, zip_longest
 from operator import itemgetter
 
 from databot import define, select, task, this, func, join, oneof, value
@@ -51,6 +51,14 @@ def replace(value, key=None, table=None):
 def case_split(value):
     words = [(w.isupper(), w) for w in value.split()]
     return [' '.join([x for _, x in g]) for k, g in groupby(words, key=itemgetter(0))]
+
+
+def bio(value):
+    result = []
+    for key, value in value:
+        for k, v in zip_longest(key, value):
+            result.append((k, v))
+    return result
 
 
 with open('settings.yml') as f:
@@ -787,7 +795,7 @@ pipeline = {
             },
         ),
 
-        task('2012/seimo-nario-puslapis/pareigos', '2012/seimo-nario-puslapis/meniu').select({
+        task('2012/seimo-nario-puslapis/pareigos', '2012/seimo-nario-puslapis/meniu').select(this.key, {
             'veikla': select('.tabs-tbl xpath:.//a[text() = "Veikla"]/@href'),
             'biografija': select('.tabs-tbl xpath:.//a[text() = "Biografija"]/@href'),
         }),
@@ -796,12 +804,18 @@ pipeline = {
             this.value.veikla,
             cookies=cookies['www.lrs.lt'],
             check='.smn-page',
+            update={
+                'source': this.key,
+            },
         ),
 
         task('2012/seimo-nario-puslapis/meniu', '2012/seimo-nario-puslapis/biografija').download(
             this.value.biografija,
             cookies=cookies['www.lrs.lt'],
             check='.smn-page',
+            update={
+                'source': this.key,
+            },
         ),
 
 
@@ -810,63 +824,28 @@ pipeline = {
             'vardas': this.value.vardas,
             'pavardė': this.value.pavarde,
             'mandatas': {
-                'nuo': select('#divDesContent xpath:.//td/text()[. = " nuo "]/following-sibling::b[1]/text()'),
-                'iki': select('#divDesContent xpath:.//td/text()[. = " iki "]/following-sibling::b[1]/text()'),
+                'nuo': select('.smn-nuo-iki xpath:b[1]/text()'),
+                'iki': select('.smn-date-iki xpath:b[1]/text()'),
             },
             'išrinktas': oneof(
-                func()(' '.join)(join(
-                    [select('#divDesContent xpath://td/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
-                    [select('#divDesContent xpath://td/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
-                )),
-                func()(' '.join)(join(
-                    [select('#divDesContent xpath://td/text()[. = "Išrinkta  "]/following-sibling::b[1]/text()').strip()],
-                    [select('#divDesContent xpath://td/text()[. = "Išrinkta  "]/following-sibling::text()[1]').strip()],
-                )),
+                select('.smn-page xpath:.//p[text() = "Išrinktas:"]/b/text()'),
+                select('.smn-page xpath:.//p[text() = "Išrinkta:"]/b/text()'),
             ),
-            'iškėlė': select('#divDesContent xpath://td/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
-            'nuotrauka': select('xpath://table[@summary = "seimo nario foto, pagrindinė info"]/tr/td/div/img/@src'),
-            'biografija': (
-                select('#divDesContent xpath:.//div[text() = "Biografija"]/following-sibling::div[1]?').null().
-                text().replace('\xad', '')
-            ),
-            'gimė': (
-                select('#divDesContent xpath:.//div[text() = "Biografija"]/following-sibling::div[1]?').
-                bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
-                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
-                    7404: '1959-04-16',        # Raimundas ALEKNA
-                    47220: '1953-11-16',       # Zigmantas BALČYTIS
-                    7326: '1960-03-03',        # Vilija BLINKEVIČIŪTĖ
-                    47898: '1978-04-15',       # Andrius BURBA
-                    47769: '1941-01-08',       # Juozas IMBRASAS
-                    43989: '1943-08-15',       # Jonas KONDROTAS
-                    47905: '1970-09-11',       # Evaldas LEMENTAUSKAS
-                    39007: '1953-03-27',       # Albinas MITRULEVIČIUS
-                    53928: '1966-01-09',       # Daiva TAMOŠIŪNAITĖ
-                    23705: '1965-03-03',       # Valdemar TOMAŠEVSKI
-                    47204: '1959-07-24',       # Viktor USPASKICH
-                }).
-                text().replace('\xad', '').
-                re(r'[Gg]im[eė] (%s)' % '|'.join([
-                    r'\d{4}-\d{2}-\d{2}',
-                    r'\d{4} \d{2} \d{2}',
-                    r'\d{4} m\. \w+ \d+ d\.',
-                    r'\d{4} m\. \w+ mėn\. \d+ d\.',
-                    r'\d{4} m\. \w+ \d+ dieną',
-                    r'\d{4} \w+ \d+ d\.',
-                ])).
-                apply(date)
-            ),
-            'frakcijos': ['#divDesContent xpath:.//td/b[text() = "Seimo frakcijose"]/following-sibling::ul[1]/li', {
-                'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
-                'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
-                'frakcija': select('a:text'),
-                'url': select('a@href'),
-                'pareigos': select('xpath:.').text().rsplit(',', 1)[1],
-                'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
-                'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
-            }],
+            'iškėlė': select('.smn-page xpath:.//p[text() = "Iškėlė:"]/b/text()'),
+            'nuotrauka': select('.smn-page .foto img@src'),
+            'frakcijos': select([
+                'xpath://h3[contains(@class, "smn-veikl-grup-pavad") and text() = "Seimo frakcijose"]/following-sibling::table[1]/tr', {
+                    'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                    'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
+                    'frakcija': select('a:text'),
+                    'url': select('a@href'),
+                    'pareigos': select('a').text().rsplit(',', 1)[1].strip(),
+                    'nuo': select('td.smn-par-data:text').split(' – ')[0],
+                    'iki': select('td.smn-par-data:text').split(' – ')[1],
+                },
+            ]),
             'narystė': [
-                '#divDesContent xpath:.//td/b[%s]/following-sibling::ul[1]/li' % ' or '.join([
+                'xpath://h3[contains(@class, "smn-veikl-grup-pavad") and (%s)]/following-sibling::table[1]/tr' % ' or '.join([
                     'text() = "%s"' % x for x in [
                         'Seimo komitetuose',
                         'Seimo komisijose',
@@ -875,14 +854,30 @@ pipeline = {
                 ]),
                 {
                     'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                    'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
+                    'tipas': select('xpath:../preceding-sibling::h3[1]/text()'),
+                    'pavadinimas': select('a:text'),
                     'url': select('a@href'),
-                    'tipas': select('xpath:../preceding-sibling::b[1]/text()'),
-                    'padalinys': select('a:text'),
-                    'pareigos': select('xpath:.').text().rsplit(',', 1)[1].split('(', 1)[0],
-                    'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
-                    'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
+                    'pareigos': select('a').text().rsplit(',', 1)[1].strip(),
+                    'nuo': select('td.smn-par-data:text').split(' – ')[0],
+                    'iki': select('td.smn-par-data:text').split(' – ')[1],
                 },
             ],
+        }),
+
+        task('2012/seimo-nario-puslapis/biografija', '2012/seimo-nario-duomenys').select(this.value.source, {
+            'biografija': select([
+                '.smn-page .pl-head-container > table.MsoNormalTable tr', (
+                    [select('td[1] > p').text().replace('\xad', '')],
+                    [select('td[2] > p').text().replace('\xad', '')],
+                ),
+            ]).apply(bio),
+            'gimė': select([
+                '.smn-page .pl-head-container > table.MsoNormalTable tr', (
+                    [select('td[1] > p').text().replace('\xad', '')],
+                    [select('td[2] > p').text().replace('\xad', '')],
+                ),
+            ]).apply(bio).apply(dict)['Gimimo data'].apply(date),
         }),
 
         # Seimo narių nuotraukos
