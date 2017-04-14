@@ -791,7 +791,7 @@ pipeline = {
             check='.smn-page',
             update={
                 'vardas': this.value.vardas,
-                'pavarde': this.value.pavarde,
+                'pavardė': this.value.pavardė,
             },
         ),
 
@@ -822,7 +822,7 @@ pipeline = {
         task('2012/seimo-nario-puslapis/pareigos', '2012/seimo-nario-duomenys').select(this.key, {
             'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
             'vardas': this.value.vardas,
-            'pavardė': this.value.pavarde,
+            'pavardė': this.value.pavardė,
             'mandatas': {
                 'nuo': select('.smn-nuo-iki xpath:b[1]/text()'),
                 'iki': select('.smn-date-iki xpath:b[1]/text()'),
@@ -866,19 +866,48 @@ pipeline = {
         }),
 
         task('2012/seimo-nario-puslapis/biografija', '2012/seimo-nario-duomenys').select(this.value.source, {
-            'biografija': select([
-                '.smn-page .pl-head-container > table.MsoNormalTable tr', (
-                    [select('td[1] > p').text().replace('\xad', '')],
-                    [select('td[2] > p').text().replace('\xad', '')],
-                ),
-            ]).apply(bio),
-            'gimė': select([
-                '.smn-page .pl-head-container > table.MsoNormalTable tr', (
-                    [select('td[1] > p').text().replace('\xad', '')],
-                    [select('td[2] > p').text().replace('\xad', '')],
-                ),
-            ]).apply(bio).apply(dict)['Gimimo data'].apply(date),
+            'biografija': (
+                select(['.smn-page .pl-head-container .pl-head-footer xpath:self::node()/following-sibling::*']).
+                text()
+            ),
+            'gimė': oneof(
+                select([
+                    '.smn-page .pl-head-container > table.MsoNormalTable tr', (
+                        [select('td[1] > p').text().replace('\xad', '')],
+                        [select('td[2] > p').text().replace('\xad', '')],
+                    ),
+                ]).
+                bypass(this.value.source.re(r'p_asm_id=([\d-]+)').cast(int), {
+                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
+                    47220: '1953-11-16',       # Zigmantas BALČYTIS
+                    7326: '1960-03-03',        # Vilija Blinkevičiūtė
+                    54: '1943-02-08',          # Julius Veselka
+                    54990: '1967-04-09',       # Audrius Nakas
+                    47842: '1959-05-17',       # Vydas Gedvilas
+                    23705: '1965-03-03',       # Valdemar Tomaševski
+                    79032: '1973-07-05',       # Saulius Jakimavičius
+                    78921: '1971-10-08',       # Aurimas Truncė
+                    47844: '1960-01-31',       # Kęstutis Daukšys
+                    39007: '1953-03-27',       # Albinas Mitrulevičius
+                    38466: '1955-08-10',       # Vidas Mikalauskas
+                    76200: '1976-08-08',       # Gintaras Tamošiūnas
+                    7242: '1958-03-14',        # Jurgis Razma
+                    38726: '1961-09-01',       # Zdzislav Palevič
+                    18: '1935-09-08',          # Juozas Bernatonis
+
+
+
+                }).
+                apply(bio).
+                apply(dict)['Gimimo data'].
+                apply(date),
+
+                select(['.smn-page .pl-head-container .pl-head-footer xpath:self::node()/following-sibling::*']).
+                text().re(r'Gimimo data\s+(\d+ m\. \w+ \d+ d\.)').apply(date),
+            ),
         }),
+
+        task('2012/seimo-nario-duomenys').merge().compact(),
 
         # Seimo narių nuotraukos
         task('2012/seimo-nario-duomenys', '2012/seimo-nario-nuotrauka').download(
