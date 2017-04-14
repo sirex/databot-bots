@@ -106,6 +106,7 @@ pipeline = {
 
         define('2012/sąrašo-puslapis', compress=True),
         define('2012/sąrašo-duomenys'),
+        define('2012/seimo-nario-puslapis/pradžia', compress=True),
         define('2012/seimo-nario-puslapis/meniu'),
         define('2012/seimo-nario-puslapis/pareigos', compress=True),
         define('2012/seimo-nario-puslapis/veikla', compress=True),
@@ -115,6 +116,12 @@ pipeline = {
 
         define('2016/sąrašo-puslapis', compress=True),
         define('2016/sąrašo-duomenys'),
+        define('2016/seimo-nario-puslapis/pradžia'),
+        define('2016/seimo-nario-puslapis/meniu'),
+        define('2016/seimo-nario-puslapis/pareigos', compress=True),
+        define('2016/seimo-nario-puslapis/veikla', compress=True),
+        define('2016/seimo-nario-puslapis/biografija', compress=True),
+        define('2016/seimo-nario-duomenys'),
         define('2016/seimo-nario-nuotrauka'),
     ],
     'tasks': [
@@ -351,7 +358,7 @@ pipeline = {
                 re(r'[Gg]im[eė] (\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
                 apply(date)
             ),
-            'narystė': [
+            'pareigos': [
                 'xpath://p[b/text() = "Biografija"]/preceding-sibling::ul[1]/li', oneof(
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
@@ -482,7 +489,7 @@ pipeline = {
                 ])).
                 apply(date)
             ),
-            'narystė': [
+            'pareigos': [
                 'xpath://p[b/text() = "Biografija"]/preceding-sibling::ul[1]/li?', oneof(
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
@@ -630,7 +637,7 @@ pipeline = {
                 'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
                 'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
             }],
-            'narystė': [
+            'pareigos': [
                 '#smain xpath:b[%s]/following-sibling::ul[1]/li' % ' or '.join([
                     'text() = "%s"' % x for x in [
                         'Seimo komitetuose',
@@ -742,7 +749,7 @@ pipeline = {
                 'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
                 'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
             }],
-            'narystė': [
+            'pareigos': [
                 '#divDesContent xpath:.//td/b[%s]/following-sibling::ul[1]/li' % ' or '.join([
                     'text() = "%s"' % x for x in [
                         'Seimo komitetuose',
@@ -786,7 +793,7 @@ pipeline = {
         ]),
 
         # Seimo narių puslapiai
-        task('2012/sąrašo-duomenys', '2012/seimo-nario-puslapis/pareigos').download(
+        task('2012/sąrašo-duomenys', '2012/seimo-nario-puslapis/pradžia').download(
             cookies=cookies['www.lrs.lt'],
             check='.smn-page',
             update={
@@ -795,10 +802,25 @@ pipeline = {
             },
         ),
 
-        task('2012/seimo-nario-puslapis/pareigos', '2012/seimo-nario-puslapis/meniu').select(this.key, {
+        task('2012/seimo-nario-puslapis/pradžia', '2012/seimo-nario-puslapis/meniu').select(this.key, {
+            'darbotvarkė': select('.tabs-tbl xpath:.//a[text() = "Darbotvarkė"]/@href?'),
+            'pareigos': select('.tabs-tbl xpath:.//a[text() = "Pareigos"]/@href'),
             'veikla': select('.tabs-tbl xpath:.//a[text() = "Veikla"]/@href'),
             'biografija': select('.tabs-tbl xpath:.//a[text() = "Biografija"]/@href'),
+            'vardas': this.value.vardas,
+            'pavardė': this.value.pavardė,
         }),
+
+        task('2012/seimo-nario-puslapis/meniu', '2012/seimo-nario-puslapis/pareigos').download(
+            this.value.pareigos,
+            cookies=cookies['www.lrs.lt'],
+            check='.smn-page',
+            update={
+                'source': this.key,
+                'vardas': this.value.vardas,
+                'pavardė': this.value.pavardė,
+            },
+        ),
 
         task('2012/seimo-nario-puslapis/meniu', '2012/seimo-nario-puslapis/veikla').download(
             this.value.veikla,
@@ -819,7 +841,7 @@ pipeline = {
         ),
 
 
-        task('2012/seimo-nario-puslapis/pareigos', '2012/seimo-nario-duomenys').select(this.key, {
+        task('2012/seimo-nario-puslapis/pareigos', '2012/seimo-nario-duomenys').select(this.value.source, {
             'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
             'vardas': this.value.vardas,
             'pavardė': this.value.pavardė,
@@ -839,26 +861,29 @@ pipeline = {
                     'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
                     'frakcija': select('a:text'),
                     'url': select('a@href'),
-                    'pareigos': select('a').text().rsplit(',', 1)[1].strip(),
+                    'pareigos': select('td[2]').text().rsplit(',', 1)[1].strip(),
                     'nuo': select('td.smn-par-data:text').split(' – ')[0],
                     'iki': select('td.smn-par-data:text').split(' – ')[1],
                 },
             ]),
-            'narystė': [
+            'pareigos': [
                 'xpath://h3[contains(@class, "smn-veikl-grup-pavad") and (%s)]/following-sibling::table[1]/tr' % ' or '.join([
                     'text() = "%s"' % x for x in [
                         'Seimo komitetuose',
                         'Seimo komisijose',
-                        'Paralamentinėse grupėse',
+                        'Parlamentinėse grupėse',
                     ]
                 ]),
                 {
                     'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
-                    'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
+                    'p_pad_id': oneof(
+                        select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
+                        select('a@href').re(r'p_seim_n_gr_id=([\d-]+)').cast(int),
+                    ),
                     'tipas': select('xpath:../preceding-sibling::h3[1]/text()'),
                     'pavadinimas': select('a:text'),
                     'url': select('a@href'),
-                    'pareigos': select('a').text().rsplit(',', 1)[1].strip(),
+                    'pareigos': select('td[2]').text().rsplit(',', 1)[1].strip(),
                     'nuo': select('td.smn-par-data:text').split(' – ')[0],
                     'iki': select('td.smn-par-data:text').split(' – ')[1],
                 },
@@ -894,9 +919,6 @@ pipeline = {
                     7242: '1958-03-14',        # Jurgis Razma
                     38726: '1961-09-01',       # Zdzislav Palevič
                     18: '1935-09-08',          # Juozas Bernatonis
-
-
-
                 }).
                 apply(bio).
                 apply(dict)['Gimimo data'].
@@ -916,28 +938,168 @@ pipeline = {
         ),
 
 
+        # XII Seimas (2016-2020)
+        # ======================
 
-        # # 2016 kadencija
-        # # ==============
+        # Seimo narių sąrašas
+        task('2016/sąrašo-puslapis').monthly().download(
+            'http://www.lrs.lt/sip/portal.show?p_r=8801&p_k=1',
+            cookies=cookies['www.lrs.lt'],
+            check='.smn-list .smn-name',
+        ),
 
-        # # Seimo narių sąrašas
-        # task('2016/sąrašo-puslapis').monthly().
-        # download('http://www.lrs.lt/sip/portal.show?p_r=8801&p_k=1&filtertype=0',
-        #          cookies=cookies['www.lrs.lt'], check='.smn-list'),
+        task('2016/sąrašo-puslapis', '2016/sąrašo-duomenys').select([
+            '.smn-list .list-member', (
+                'a.smn-name@href', {
+                    'vardas': select('a.smn-name:text'),
+                    'pavardė': select('a.smn-name .smn-pavarde:text'),
+                },
+            ),
+        ]),
 
-        # task('2016/sąrašo-puslapis', '2016/sąrašo-duomenys').select([
-        #     '.smn-list .list-member', (
-        #         'a.smn-name@href', {
-        #             'vardas': select('a.smn-name:text'),
-        #             'pavarde': select('a.smn-name > span.smn-pavarde:text'),
-        #             'nuotrauka': select('.smn-big-photo img@src'),
-        #         },
-        #     ),
-        # ]),
+        # Seimo narių puslapiai
+        task('2016/sąrašo-duomenys', '2016/seimo-nario-puslapis/pradžia').download(
+            cookies=cookies['www.lrs.lt'],
+            check='.smn-page',
+            update={
+                'vardas': this.value.vardas,
+                'pavardė': this.value.pavardė,
+            },
+        ),
 
-        # # Nuotraukos
-        # task('2016/sąrašo-duomenys', '2016/seimo-nario-nuotrauka').
-        # download(this.value.nuotrauka, cookies=cookies['www.lrs.lt']),
+        task('2016/seimo-nario-puslapis/pradžia', '2016/seimo-nario-puslapis/meniu').select(this.key, {
+            'darbotvarkė': select('.tabs-tbl xpath:.//a[text() = "Darbotvarkė"]/@href?'),
+            'pareigos': select('.tabs-tbl xpath:.//a[text() = "Pareigos"]/@href'),
+            'veikla': select('.tabs-tbl xpath:.//a[text() = "Veikla"]/@href'),
+            'biografija': select('.tabs-tbl xpath:.//a[text() = "Biografija"]/@href'),
+            'vardas': this.value.vardas,
+            'pavardė': this.value.pavardė,
+        }),
+
+        task('2016/seimo-nario-puslapis/meniu', '2016/seimo-nario-puslapis/pareigos').download(
+            this.value.pareigos,
+            cookies=cookies['www.lrs.lt'],
+            check='.smn-page',
+            update={
+                'source': this.key,
+                'vardas': this.value.vardas,
+                'pavardė': this.value.pavardė,
+            },
+        ),
+
+        task('2016/seimo-nario-puslapis/meniu', '2016/seimo-nario-puslapis/veikla').download(
+            this.value.veikla,
+            cookies=cookies['www.lrs.lt'],
+            check='.smn-page',
+            update={
+                'source': this.key,
+            },
+        ),
+
+        task('2016/seimo-nario-puslapis/meniu', '2016/seimo-nario-puslapis/biografija').download(
+            this.value.biografija,
+            cookies=cookies['www.lrs.lt'],
+            check='.smn-page',
+            update={
+                'source': this.key,
+            },
+        ),
+
+
+        task('2016/seimo-nario-puslapis/pareigos', '2016/seimo-nario-duomenys').select(this.value.source, {
+            'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+            'vardas': this.value.vardas,
+            'pavardė': this.value.pavardė,
+            'mandatas': {
+                'nuo': select('.smn-nuo-iki xpath:b[1]/text()'),
+                'iki': select('.smn-date-iki xpath:b[1]/text()?'),
+            },
+            'išrinktas': oneof(
+                select('.smn-page xpath:.//p[text() = "Išrinktas:"]/b/text()'),
+                select('.smn-page xpath:.//p[text() = "Išrinkta:"]/b/text()'),
+            ),
+            'iškėlė': select('.smn-page xpath:.//p[text() = "Iškėlė:"]/b/text()'),
+            'nuotrauka': select('.smn-page .foto img@src'),
+            'frakcijos': select([
+                'xpath://h3[contains(@class, "smn-veikl-grup-pavad") and text() = "Seimo frakcijose"]/following-sibling::table[1]/tr', {
+                    'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                    'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
+                    'frakcija': select('a:text'),
+                    'url': select('a@href'),
+                    'pareigos': select('td[2]').text().rsplit(',', 1)[1].strip(),
+                    'nuo': select('td.smn-par-data:text').split(' – ')[0],
+                    'iki': select('td.smn-par-data:text').split(' – ').get(1),
+                },
+            ]),
+            'pareigos': [
+                'xpath://h3[contains(@class, "smn-veikl-grup-pavad") and (%s)]/following-sibling::table[1]/tr' % ' or '.join([
+                    'text() = "%s"' % x for x in [
+                        'Seimo komitetuose',
+                        'Seimo komisijose',
+                        'Parlamentinėse grupėse',
+                    ]
+                ]),
+                {
+                    'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                    'p_pad_id': oneof(
+                        select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
+                        select('a@href').re(r'p_seim_n_gr_id=([\d-]+)').cast(int),
+                    ),
+                    'tipas': select('xpath:../preceding-sibling::h3[1]/text()'),
+                    'pavadinimas': select('a:text'),
+                    'url': select('a@href'),
+                    'pareigos': select('td[2]').text().rsplit(',', 1)[1].strip(),
+                    'nuo': oneof(
+                        select('td.smn-par-data:text').split(' – ')[0],
+                        select('xpath:ancestor::table[1]//td[contains(@class, "smn-par-data") and text()]/text()').split(' – ')[0],
+                    ),
+                    'iki': oneof(
+                        select('td.smn-par-data:text').split(' – ').get(1),
+                        select('xpath:ancestor::table[1]//td[contains(@class, "smn-par-data") and text()]/text()').split(' – ').get(1),
+                    ),
+                },
+            ],
+        }),
+
+        task('2016/seimo-nario-puslapis/biografija', '2016/seimo-nario-duomenys').select(this.value.source, {
+            'biografija': (
+                select(['.smn-page .pl-head-container .pl-head-footer xpath:self::node()/following-sibling::*']).
+                text()
+            ),
+            'gimė': oneof(
+                select([
+                    '.smn-page .pl-head-container > table.MsoNormalTable tr', (
+                        [select('td[1] > p').text().replace('\xad', '')],
+                        [select('td[2] > p').text().replace('\xad', '')],
+                    ),
+                ]).
+                bypass(this.value.source.re(r'p_asm_id=([\d-]+)').cast(int), {
+                    # Pataisyti trūkstamas arba neįprastai užrašytas gimimo datas biografijos tekste.
+                    79168: '1987-07-11',  # Justas Džiugelis
+                    13555: '1965-07-13',  # Aurimas Gaidžiūnas
+                    79141: '1958-07-26',  # Viktoras Pranckietis
+                    79175: '1952-08-18',  # Dainius Kepenis
+
+
+
+                }).
+                apply(bio).
+                apply(dict)['Gimimo data'].
+                apply(date),
+
+                select(['.smn-page .pl-head-container .pl-head-footer xpath:self::node()/following-sibling::*']).
+                text().re(r'Gimimo data\s+(\d+ m\. \w+ \d+ d\.)').apply(date),
+            ),
+        }),
+
+        task('2016/seimo-nario-duomenys').merge().compact(),
+
+        # Seimo narių nuotraukos
+        task('2016/seimo-nario-duomenys', '2016/seimo-nario-nuotrauka').download(
+            this.value.nuotrauka,
+            cookies=cookies['www.lrs.lt'],
+        ),
+
     ],
 }
 
