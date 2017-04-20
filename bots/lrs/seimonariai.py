@@ -154,6 +154,8 @@ pipeline = {
         ),
 
         task('1990/seimo-nario-puslapis', '1990/seimo-nario-duomenys').select(this.key, {
+            'seimas': value('V'),
+            'kadencija': value('1990–1992'),
             'p_asm_id': this.key.urlparse().query.p_asm_id.cast(int),
             'vardas': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[0],
             'pavardė': select('#SN_pareigos xpath:.//h3[1]/br/following-sibling::text()[1]').apply(case_split)[1],
@@ -161,18 +163,33 @@ pipeline = {
                 'nuo': select('#SN_pareigos xpath:.//p/text()[. = " nuo "]/following-sibling::b[1]/text()').replace(' ', '-'),
                 'iki': select('#SN_pareigos xpath:.//p/text()[. = " iki "]/following-sibling::b[1]/text()').replace(' ', '-'),
             },
-            'išrinktas': func()(' '.join)(join(
+            'išrinko': func()(' '.join)(join(
                 [select('#SN_pareigos xpath:.//p/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
                 [select('#SN_pareigos xpath:.//p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
+                [select('#SN_pareigos xpath:.//p/text()[. = "Išrinkta  "]/following-sibling::b[1]/text()').strip()],
+                [select('#SN_pareigos xpath:.//p/text()[. = "Išrinkta  "]/following-sibling::text()[1]').strip()],
             )),
             'iškėlė': select('#SN_pareigos xpath:.//p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
-
             'nuotrauka': select('#SN_pareigos img@src'),
             'biografija': select(['xpath://b[text() = "Biografija"]/ancestor::table[1]']).text().replace('\xad', ''),
             'gimė': (
                 select(['xpath://b[text() = "Biografija"]/ancestor::table[1]']).text().replace('\xad', '').
                 re(r'Gim[eė] (\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.)').apply(date)
             ),
+            'pareigos': this.value.bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                126: [  # Vytautas LANDSBERGIS
+                    {
+                        'p_asm_id': 126,
+                        'p_pad_id': None,
+                        'nuo': '1990-03-10',
+                        'iki': '1992-11-22',
+                        'pareigos': 'Seimo pirmininkas',
+                        'pavadinimas': 'Seimas',
+                        'tipas': 'Seimo pirmininkas',
+                        'url': None,
+                    },
+                ],
+            }, default=[]),
         }),
 
         # Seimo narių nuotraukos
@@ -216,7 +233,7 @@ pipeline = {
                 'nuo': select('#SN_pareigos xpath:.//p/text()[. = " nuo "]/following-sibling::b[1]/text()').replace(' ', '-'),
                 'iki': select('#SN_pareigos xpath:.//p/text()[. = " iki "]/following-sibling::b[1]/text()').replace(' ', '-'),
             },
-            'išrinktas': func()(' '.join)(join(
+            'išrinko': func()(' '.join)(join(
                 [select('#SN_pareigos xpath:.//p/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
                 [select('#SN_pareigos xpath:.//p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
             )),
@@ -324,7 +341,7 @@ pipeline = {
                 'nuo': select('xpath://td/p/text()[. = " nuo "]/following-sibling::b[1]/text()').replace(' ', '-'),
                 'iki': select('xpath://td/p/text()[. = " iki "]/following-sibling::b[1]/text()').replace(' ', '-'),
             },
-            'išrinktas': func()(' '.join)(join(
+            'išrinko': func()(' '.join)(join(
                 [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
                 [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
             )),
@@ -362,9 +379,10 @@ pipeline = {
                 'xpath://p[b/text() = "Biografija"]/preceding-sibling::ul[1]/li', oneof(
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
                         'url': select('a@href'),
                         'padalinys': select('a:text'),
-                        'pareigos': select('xpath:text()[1]').splitlines()[0],
+                        'pareigos': select('xpath:text()[1]').splitlines()[0].strip(),
                         'nuo': (
                             select('xpath:text()[1]').
                             splitlines()[1].
@@ -381,22 +399,25 @@ pipeline = {
                     },
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': value(None),
                         'url': value(None),
                         'padalinys': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[0],
-                        'pareigos': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[1],
+                        'pareigos': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[1].strip(),
                         'nuo': select('xpath:.').text().re(r'nuo (\d{4} \d{2} \d{2})').apply(date),
                         'iki': select('xpath:.').text().re(r'iki (\d{4} \d{2} \d{2})').apply(date),
                     },
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': value(None),
                         'url': value(None),
                         'padalinys': select('xpath:.').text().rsplit(',', 1)[0],
-                        'pareigos': select('xpath:.').text().rsplit(',', 1)[1],
+                        'pareigos': select('xpath:.').text().rsplit(',', 1)[1].strip(),
                         'nuo': value(None),
                         'iki': value(None),
                     },
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': value(None),
                         'url': value(None),
                         'padalinys': select('xpath:.').text(),
                         'pareigos': value(None),
@@ -453,7 +474,7 @@ pipeline = {
                 'nuo': select('xpath://td/p/text()[. = " nuo "]/following-sibling::b[1]/text()').replace(' ', '-'),
                 'iki': select('xpath://td/p/text()[. = " iki "]/following-sibling::b[1]/text()').replace(' ', '-'),
             },
-            'išrinktas': func()(' '.join)(join(
+            'išrinko': func()(' '.join)(join(
                 [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
                 [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
             )),
@@ -493,9 +514,10 @@ pipeline = {
                 'xpath://p[b/text() = "Biografija"]/preceding-sibling::ul[1]/li?', oneof(
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
                         'url': select('a@href'),
                         'padalinys': select('a:text'),
-                        'pareigos': select('xpath:text()[1]').splitlines()[0],
+                        'pareigos': select('xpath:text()[1]').splitlines()[0].strip(),
                         'nuo': (
                             select('xpath:text()[1]').
                             splitlines()[1].
@@ -512,22 +534,25 @@ pipeline = {
                     },
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': value(None),
                         'url': value(None),
                         'padalinys': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[0],
-                        'pareigos': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[1],
+                        'pareigos': select('xpath:.').text().rsplit('(', 1)[0].rsplit(',', 1)[1].strip(),
                         'nuo': select('xpath:.').text().re(r'nuo (\d{4} \d{2} \d{2})').apply(date),
                         'iki': select('xpath:.').text().re(r'iki (\d{4} \d{2} \d{2})').apply(date),
                     },
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': value(None),
                         'url': value(None),
                         'padalinys': select('xpath:.').text().rsplit(',', 1)[0],
-                        'pareigos': select('xpath:.').text().rsplit(',', 1)[1],
+                        'pareigos': select('xpath:.').text().rsplit(',', 1)[1].strip(),
                         'nuo': value(None),
                         'iki': value(None),
                     },
                     {
                         'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                        'p_pad_id': value(None),
                         'url': value(None),
                         'padalinys': select('xpath:.').text(),
                         'pareigos': value(None),
@@ -578,7 +603,7 @@ pipeline = {
                 'nuo': select('#smain xpath:.//td/text()[. = " nuo "]/following-sibling::b[1]/text()'),
                 'iki': select('#smain xpath:.//td/text()[. = " iki "]/following-sibling::b[1]/text()'),
             },
-            'išrinktas': oneof(
+            'išrinko': oneof(
                 func()(' '.join)(join(
                     [select('#smain xpath://td/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
                     [select('#smain xpath://td/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
@@ -633,7 +658,7 @@ pipeline = {
                 'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
                 'frakcija': select('a:text'),
                 'url': select('a@href'),
-                'pareigos': select('xpath:.').text().rsplit(',', 1)[1],
+                'pareigos': select('xpath:.').text().rsplit(',', 1)[1].strip(),
                 'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
                 'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
             }],
@@ -647,10 +672,11 @@ pipeline = {
                 ]),
                 {
                     'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                    'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
                     'url': select('a@href'),
                     'tipas': select('xpath:../preceding-sibling::b[1]/text()'),
                     'padalinys': select('a:text'),
-                    'pareigos': select('xpath:.').text().rsplit(',', 1)[1].split('(', 1)[0],
+                    'pareigos': select('xpath:.').text().rsplit(',', 1)[1].split('(', 1)[0].strip(),
                     'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
                     'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
                 },
@@ -697,7 +723,7 @@ pipeline = {
                 'nuo': select('#divDesContent xpath:.//td/text()[. = " nuo "]/following-sibling::b[1]/text()'),
                 'iki': select('#divDesContent xpath:.//td/text()[. = " iki "]/following-sibling::b[1]/text()'),
             },
-            'išrinktas': oneof(
+            'išrinko': oneof(
                 func()(' '.join)(join(
                     [select('#divDesContent xpath://td/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
                     [select('#divDesContent xpath://td/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
@@ -745,7 +771,7 @@ pipeline = {
                 'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
                 'frakcija': select('a:text'),
                 'url': select('a@href'),
-                'pareigos': select('xpath:.').text().rsplit(',', 1)[1],
+                'pareigos': select('xpath:.').text().rsplit(',', 1)[1].strip(),
                 'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
                 'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
             }],
@@ -759,10 +785,11 @@ pipeline = {
                 ]),
                 {
                     'p_asm_id': this.key.re(r'p_asm_id=([\d-]+)').cast(int),
+                    'p_pad_id': select('a@href').re(r'p_pad_id=([\d-]+)').cast(int),
                     'url': select('a@href'),
                     'tipas': select('xpath:../preceding-sibling::b[1]/text()'),
                     'padalinys': select('a:text'),
-                    'pareigos': select('xpath:.').text().rsplit(',', 1)[1].split('(', 1)[0],
+                    'pareigos': select('xpath:.').text().rsplit(',', 1)[1].split('(', 1)[0].strip(),
                     'nuo': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[0].apply(date),
                     'iki': select('xpath:.').text().rall(r'\d{4}-\d{2}-\d{2}')[1].apply(date),
                 },
@@ -849,7 +876,7 @@ pipeline = {
                 'nuo': select('.smn-nuo-iki xpath:b[1]/text()'),
                 'iki': select('.smn-date-iki xpath:b[1]/text()'),
             },
-            'išrinktas': oneof(
+            'išrinko': oneof(
                 select('.smn-page xpath:.//p[text() = "Išrinktas:"]/b/text()'),
                 select('.smn-page xpath:.//p[text() = "Išrinkta:"]/b/text()'),
             ),
@@ -1014,7 +1041,7 @@ pipeline = {
                 'nuo': select('.smn-nuo-iki xpath:b[1]/text()'),
                 'iki': select('.smn-date-iki xpath:b[1]/text()?'),
             },
-            'išrinktas': oneof(
+            'išrinko': oneof(
                 select('.smn-page xpath:.//p[text() = "Išrinktas:"]/b/text()'),
                 select('.smn-page xpath:.//p[text() = "Išrinkta:"]/b/text()'),
             ),
