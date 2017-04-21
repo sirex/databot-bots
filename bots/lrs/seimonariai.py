@@ -236,6 +236,8 @@ pipeline = {
             'išrinko': func()(' '.join)(join(
                 [select('#SN_pareigos xpath:.//p/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
                 [select('#SN_pareigos xpath:.//p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
+                [select('#SN_pareigos xpath:.//p/text()[. = "Išrinkta  "]/following-sibling::b[1]/text()').strip()],
+                [select('#SN_pareigos xpath:.//p/text()[. = "Išrinkta  "]/following-sibling::text()[1]').strip()],
             )),
             'iškėlė': select('#SN_pareigos xpath:.//p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
 
@@ -294,6 +296,20 @@ pipeline = {
                 re(r'Gim[eė] -? ?(\d{4} \d{2} \d{2}|\d{4} m\. \w+ \d+ d\.|\d{4} \w+ \d+ d\.)').
                 apply(date)
             ),
+            'pareigos': this.value.bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
+                110: [  # Česlovas JURŠĖNAS
+                    {
+                        'p_asm_id': 110,
+                        'p_pad_id': None,
+                        'nuo': '1992-11-24',
+                        'iki': '1996-11-22',
+                        'pareigos': 'Seimo pirmininkas',
+                        'pavadinimas': 'Seimas',
+                        'tipas': 'Seimo pirmininkas',
+                        'url': None,
+                    },
+                ],
+            }, default=[]),
         }),
 
         # Seimo narių nuotraukos
@@ -341,11 +357,20 @@ pipeline = {
                 'nuo': select('xpath://td/p/text()[. = " nuo "]/following-sibling::b[1]/text()').replace(' ', '-'),
                 'iki': select('xpath://td/p/text()[. = " iki "]/following-sibling::b[1]/text()').replace(' ', '-'),
             },
+            # TODO: bypass these exceptional cases:
+            # 7407: 'Trakų (nr. 58) apygarda',                    # Danutė ALEKSIŪNIENĖ
+            # 7403: 'Vilniaus - Šalčininkų (Nr. 56) apygardoje',  # Jan SENKEVIČ
+            # 98:  Aukštaitijos (Nr. 28) apygardoje',             # Virmantas VELIKONIS
             'išrinko': func()(' '.join)(join(
-                [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::b[1]/text()').strip()],
-                [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip()],
+                [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::b[1]').text().strip(' ,')],
+                [select('xpath://td/p/text()[. = "Išrinktas  "]/following-sibling::text()[1]').strip(' ,')],
+                [select('xpath://td/p/text()[. = "Išrinkta  "]/following-sibling::b[1]').text().strip(' ,')],
+                [select('xpath://td/p/text()[. = "Išrinkta  "]/following-sibling::text()[1]').strip(' ,')],
             )),
-            'iškėlė': select('xpath://td/p/text()[. = "iškėlė "]/following-sibling::b[1]?').null().text(),
+            'iškėlė': oneof(
+                select('xpath://td/p/text()[. = "iškėlė "]/following-sibling::b[1]').text(),
+                select('xpath://td/p/b[contains(text(), "išsikėlė")]').text(),
+            ),
             'nuotrauka': (
                 select('xpath://img[contains(@tppabs, "seimo_nariu_nuotraukos")]/@src?').
                 bypass(this.key.re(r'p_asm_id=([\d-]+)').cast(int), {
