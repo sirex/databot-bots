@@ -9,7 +9,7 @@ from databot import define, task
 with open('settings.yml') as f:
     settings = yaml.load(f)
 
-cookies = settings['cookies']
+cookies = settings['cookies']['www.lrs.lt']
 
 pipeline = {
     'pipes': [
