@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
-import os
+import yaml
 import botlib
 
 from databot import define, task, this
 
 
-envvars = {'incap_ses_108_791905', 'incap_ses_473_791905'}
-cookies = {x: os.environ[x] for x in envvars if x in os.environ}
+with open('settings.yml') as f:
+    settings = yaml.load(f)
+
+cookies = settings['cookies']
 
 pipeline = {
     'pipes': [
