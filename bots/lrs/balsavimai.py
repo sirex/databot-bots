@@ -21,16 +21,26 @@ pipeline = {
     ],
     'tasks': [
         # Darbotvarkės klausimas (balsavimai)
-        task('klausimų-puslapiai', 'balsavimų-sąrašas').select([
-            '.sale_svarst_eiga tr td[2] xpath:a[text()="balsavimas"]', '@href'
-        ], check='xpath://h1[contains(text(), "Darbotvarkės klausimas")]/text()').dedup(),
-        task('balsavimų-sąrašas', 'balsavimų-puslapiai').download(cookies=cookies),
+        task('klausimų-puslapiai', 'balsavimų-sąrašas').
+        select(
+            ['.sale_svarst_eiga tr td[2] xpath:a[text()="balsavimas"]', '@href'],
+            check='xpath://h1[contains(text(), "Darbotvarkės klausimas")]/text()',
+        ).
+        dedup(),
+
+        task('balsavimų-sąrašas', 'balsavimų-puslapiai').
+        download(cookies=cookies, check='#page-content h1.page-title'),
 
         # Darbotvarkės klausimas (registracijos)
-        task('klausimų-puslapiai', 'registracijos-sąrašas').select([
-            '.sale_svarst_eiga tr td[2] xpath:a[text()="registracija"]', '@href'
-        ], check='xpath://h1[contains(text(), "Darbotvarkės klausimas")]/text()').dedup(),
-        task('registracijos-sąrašas', 'registracijos-puslapiai').download(cookies=cookies),
+        task('klausimų-puslapiai', 'registracijos-sąrašas').
+        select(
+            ['.sale_svarst_eiga tr td[2] xpath:a[text()="registracija"]', '@href'],
+            check='xpath://h1[contains(text(), "Darbotvarkės klausimas")]/text()',
+        ).
+        dedup(),
+
+        task('registracijos-sąrašas', 'registracijos-puslapiai').
+        download(cookies=cookies, check='#page-content h1.page-title'),
     ],
 }
 
