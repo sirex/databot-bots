@@ -2,6 +2,7 @@
 
 import os
 import botlib
+import yaml
 
 from subprocess import run, PIPE
 from tempfile import NamedTemporaryFile
@@ -36,8 +37,11 @@ def xtodocbook(content, mime):
         raise RuntimeError("Unknown mime type: %r." % mime)
 
 
-envvars = {'incap_ses_108_791905', 'incap_ses_473_791905'}
-cookies = {x: os.environ[x] for x in envvars if x in os.environ}
+with open('settings.yml') as f:
+    settings = yaml.load(f)
+
+cookies = settings['cookies']['www.lrs.lt']
+
 
 pipeline = {
     'pipes': [
@@ -85,6 +89,7 @@ pipeline = {
             'filename': this.value.headers['Content-Disposition'].header().filename,
             'mimetype': this.value.headers['Content-Type'].header().value,
             'docbook': this.value.content.apply(xtodocbook, this.value.headers['Content-Type'].header().value),
+            'date': this.key.pipe('stenogramų-puslapiai', this.value.attachment).last()['reg. data'],
         })
     ],
 }
