@@ -36,6 +36,16 @@ def getbot(path):
         raise ValueError("Path '%s' does not exists." % db_path)
 
 
+def find_data_dir(source):
+    pth = pathlib.Path(source).with_suffix('.db')
+    parts = []
+    for i, part in enumerate(reversed(pth.parts)):
+        parts.insert(0, part)
+        if pth.parents[i].name == 'bots':
+            return pth.parents[i + 1] / 'data' / pathlib.Path(*parts)
+    raise RuntimeError("Could not find data dir for %s" % source)
+
+
 def runbot(pipeline):
     """Automatically sets database to Sqlite file that matches script path.
 
@@ -44,6 +54,5 @@ def runbot(pipeline):
         bots/vlkk/vardai.py -> sqlite:///data/vlkk/vardai.db
 
     """
-    path = pathlib.Path('data', *pathlib.Path(sys.argv[0]).with_suffix('.db').parts[1:])
-    dburi = 'sqlite:///%s' % path
+    dburi = 'sqlite:///%s' % find_data_dir(sys.argv[0])
     return databot.Bot(dburi).main(pipeline)
