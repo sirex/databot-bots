@@ -11,6 +11,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 
+from databot import define, task
+
 
 class has_n_elements:
     def __init__(self, by, value, n):
@@ -37,6 +39,8 @@ class Browser(selenium.webdriver.Chrome):
 
 
 def extract_index_urls():
+    yield None, None
+
     browser = Browser()
 
     # Search for metrics
@@ -69,19 +73,17 @@ def extract_index_urls():
     browser.quit()
 
 
-def define(bot):
-    bot.define('index urls')
-    bot.define('index pages')
-
-
-def run(bot):
-    index_urls = bot.pipe('index urls')
-    # index_urls.append(extract_index_urls())
-
-    index_pages = bot.pipe('index pages')
-    with index_urls:
-        index_pages.download()
+pipeline = {
+    'pipes': [
+        define('index urls'),
+        define('index pages', compress=True),
+    ],
+    'tasks': [
+        task('index urls').monthly().append(extract_index_urls()),
+        task('index urls', 'index pages').download(),
+    ],
+}
 
 
 if __name__ == '__main__':
-    botlib.runbot(define, run)
+    botlib.runbot(pipeline)
