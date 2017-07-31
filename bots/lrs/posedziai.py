@@ -3,7 +3,13 @@
 import yaml
 import botlib
 
-from databot import define, task, this
+from databot import define, task
+
+
+def append_last_session(task):
+    last = max(task.source.rows(), default=None, key=lambda x: x.value['pradžia'])
+    if last:
+        task.target.append(last.key, last.value)
 
 
 with open('settings.yml') as f:
@@ -42,7 +48,7 @@ pipeline = {
 
         # Paskutinė sesija
         # Visada siunčiam paskutinę sisiją, kadangi ten gali būti naujų posėdžių.
-        task('sesijų-sąrašas', 'sesijų-sąrašas').daily().max(this.value['pradžia']),
+        task('sesijų-sąrašas', 'sesijų-sąrašas').daily().apply(append_last_session),
         task('sesijų-sąrašas', 'sesijų-puslapiai').download(cookies=cookies, check='#page-content h1.page-title'),
 
         # Posėdžių sąrašas

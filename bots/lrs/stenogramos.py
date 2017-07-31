@@ -82,15 +82,19 @@ pipeline = {
         task('metadata').export('data/lrs/stenogramos/metadata.csv'),
 
         # Atsisiunčiame prisegtus dokumentų failus (doc, docx formatais)
-        task('metadata', 'dokumentai').download(this.value.attachment, cookies=cookies),
+        task('metadata', 'dokumentai').download(this.value.attachment, cookies=cookies, update={
+            'date': this.value['reg. data'],
+            'source': this.key,
+        }),
 
         # Convertuojame doc, docx failus į docbook formatą
         task('dokumentai', 'docbook').select(this.key, {
             'filename': this.value.headers['Content-Disposition'].header().filename,
             'mimetype': this.value.headers['Content-Type'].header().value,
             'docbook': this.value.content.apply(xtodocbook, this.value.headers['Content-Type'].header().value),
-            'date': this.key.pipe('stenogramų-puslapiai', this.value.attachment).last()['reg. data'],
-        })
+            'source': this.value.source,
+            'date': this.value.date,
+        }),
     ],
 }
 
