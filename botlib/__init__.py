@@ -46,7 +46,7 @@ def find_data_dir(source):
     raise RuntimeError("Could not find data dir for %s" % source)
 
 
-def runbot(pipeline):
+def runbot(pipeline, initializer=None):
     """Automatically sets database to Sqlite file that matches script path.
 
     Example how script path will be converted to sqlite uri:
@@ -55,4 +55,4 @@ def runbot(pipeline):
 
     """
     dburi = 'sqlite:///%s' % find_data_dir(sys.argv[0])
-    return databot.Bot(dburi).main(pipeline)
+    return databot.Bot(dburi, initializer=initializer).main(pipeline)
