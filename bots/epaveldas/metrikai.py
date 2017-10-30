@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+import re
+
+from operator import itemgetter
+
 import botlib
 
 import selenium.common
@@ -10,6 +14,8 @@ import selenium.webdriver.support.expected_conditions as ec
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
+
+from databot import define, task, select, this
 
 
 class has_n_elements:
@@ -22,10 +28,10 @@ class has_n_elements:
         return len(driver.find_elements(self.by, self.value)) == self.n
 
 
-class Browser(selenium.webdriver.Chrome):
+class Browser(selenium.webdriver.Firefox):
 
     def __init__(self):
-        super().__init__('/usr/lib/chromium-browser/chromedriver')
+        super().__init__()
         self.wait = WebDriverWait(self, 10)
         self.set_page_load_timeout(10)
 
@@ -69,19 +75,77 @@ def extract_index_urls():
     browser.quit()
 
 
-def define(bot):
-    bot.define('index urls')
-    bot.define('index pages')
+def merge_intervals(intervals):
+    if intervals:
+        intervals = iter(sorted(intervals, key=itemgetter(0)))
+        low, high = next(intervals)
+        for a, b in intervals:
+            if a <= high:
+                high = max(high, b)
+            else:
+                yield low, high
+                low, high = a, b
+        yield low, high
 
 
-def run(bot):
-    index_urls = bot.pipe('index urls')
-    # index_urls.append(extract_index_urls())
+def parse_title(title):
+    parapija, tail = title.split(' RKB ', 1)
+    years = []
+    for start, _, _, end in re.findall(r'(\d{4})((--|-|–)(\d{4}))? m\.', tail):
+        start = int(start)
+        end = int(end) if end else start
+        years.append((start, end))
+    if years:
+        years = list(merge_intervals(years))
+        start, end = zip(*years)
+        start = min(start)
+        end = max(end)
+        total = sum(b - a for a, b in years)
+    else:
+        start = end = 0
+    return {
+        'parapija': parapija,
+        'pradžia': start,
+        'pabaiga': end,
+        'trukmė': total,
+    }
 
-    index_pages = bot.pipe('index pages')
-    with index_urls:
-        index_pages.download()
+
+pipeline = {
+    'pipes': [
+        define('paieškos-nuorodos'),
+        define('paieškos-puslapiai', compress=True),
+        define('knygos-duomenys'),
+    ],
+    'tasks': [
+        # task('paieškos-nuorodos').once().append(extract_index_urls(),
+        #                                         progress='paieškos-nuorodos').dedup(),
+        task('paieškos-nuorodos', 'paieškos-puslapiai').download(),
+        task('paieškos-puslapiai', 'knygos-duomenys').select(this.key, {
+            'url': this.value.url,
+            'antraštė': select('.authorTitle').text(),
+            'd1': select([
+                '.entryTable tr', (
+                    select('th:content'),
+                    select('td:content').strip(),
+                ),
+            ]).apply(dict),
+            'd2': select('.authorTitle').text().apply(parse_title),
+        }),
+        task('knygos-duomenys').export('data/epaveldas/metrikai/knygos.csv', update=lambda row: {
+            'url': row.value['url'],
+            'antraštė': row.value['antraštė'],
+            'apimtis': row.value['d1']['Apimtis'],
+            'kalbos': row.value['d1']['Kalbos'],
+            'autoriai': row.value['d1'].get('Kolektyviai autoriai'),
+            'parapija': row.value['d2']['parapija'],
+            'pradžia': row.value['d2']['pradžia'],
+            'pabaiga': row.value['d2']['pabaiga'],
+            'trukmė': row.value['d2']['trukmė'],
+        }),
+    ],
+}
 
 
 if __name__ == '__main__':
-    botlib.runbot(define, run)
+    botlib.runbot(pipeline)

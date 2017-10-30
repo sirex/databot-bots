@@ -9,6 +9,8 @@ setup(
         'gramtool',
         'GeoAlchemy2',
         'pandas',
+        'selenium',
+        'psycopg2',
     ],
     entry_points={
         'console_scripts': [
