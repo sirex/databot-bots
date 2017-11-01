@@ -29,12 +29,16 @@ class Browser(selenium.webdriver.Chrome):
     def __init__(self):
         options = selenium.webdriver.ChromeOptions()
         options.add_argument('headless')
+        options.add_argument('window-size=1920x1080')
         super().__init__(chrome_options=options)
         self.wait = WebDriverWait(self, 10)
         self.set_page_load_timeout(10)
 
     def wait_element_by_class_name(self, name):
         return self.wait.until(ec.presence_of_element_located((By.CLASS_NAME, name)))
+
+    def wait_element_by_xpath(self, xpath):
+        return self.wait.until(ec.presence_of_element_located((By.XPATH, xpath)))
 
     def wait_n_elemens_by_css_selector(self, n, selector):
         return self.wait.until(has_n_elements(By.CSS_SELECTOR, selector, n))
@@ -45,6 +49,7 @@ def extract_index_urls():
 
     # Search for metrics
     browser.get('http://www.epaveldas.lt/patikslintoji-paieska')
+    browser.wait_element_by_xpath('//button[@value="Ieškoti"]')
     browser.find_element_by_xpath('//label[text()="tekstas"]/preceding-sibling::input[1]').click()
     browser.find_element_by_xpath('//button[@value="Ieškoti"]').click()
     browser.wait_element_by_class_name('objectsDataTable')
@@ -71,6 +76,7 @@ def extract_index_urls():
         try:
             browser.wait.until(ec.staleness_of(row))
         except TimeoutException:
+            browser.get_screenshot_as_file('/tmp/shot.png')
             break
 
         next_btn = browser.find_element_by_xpath('//img[@title="Sekantis psl."]/..')
