@@ -24,6 +24,19 @@ class has_n_elements:
         return len(driver.find_elements(self.by, self.value)) == self.n
 
 
+class attribute_has_changed:
+    def __init__(self, by, selector, attribute, value):
+        self.by = by
+        self.selector = selector
+        self.attribute = attribute
+        self.value = value
+
+    def __call__(self, driver):
+        elem = driver.find_element(self.by, self.selector)
+        value = elem.get_attribute(self.attribute)
+        return self.value != value
+
+
 class Browser(selenium.webdriver.Chrome):
 
     def __init__(self):
@@ -31,14 +44,14 @@ class Browser(selenium.webdriver.Chrome):
         options.add_argument('headless')
         options.add_argument('window-size=1920x1080')
         super().__init__(chrome_options=options)
-        self.wait = WebDriverWait(self, 10)
-        self.set_page_load_timeout(10)
+        self.wait = WebDriverWait(self, 60)
+        self.set_page_load_timeout(60)
 
     def wait_element_by_class_name(self, name):
-        return self.wait.until(ec.presence_of_element_located((By.CLASS_NAME, name)))
+        return self.wait.until(ec.visibility_of_element_located((By.CLASS_NAME, name)))
 
     def wait_element_by_xpath(self, xpath):
-        return self.wait.until(ec.presence_of_element_located((By.XPATH, xpath)))
+        return self.wait.until(ec.visibility_of_element_located((By.XPATH, xpath)))
 
     def wait_n_elemens_by_css_selector(self, n, selector):
         return self.wait.until(has_n_elements(By.CSS_SELECTOR, selector, n))
@@ -47,42 +60,56 @@ class Browser(selenium.webdriver.Chrome):
 def extract_index_urls():
     browser = Browser()
 
-    # Search for metrics
-    browser.get('http://www.epaveldas.lt/patikslintoji-paieska')
-    browser.wait_element_by_xpath('//button[@value="Ieškoti"]')
-    browser.find_element_by_xpath('//label[text()="tekstas"]/preceding-sibling::input[1]').click()
-    browser.find_element_by_xpath('//button[@value="Ieškoti"]').click()
-    browser.wait_element_by_class_name('objectsDataTable')
+    try:
+        # Search for metrics
+        browser.get('http://www.epaveldas.lt/patikslintoji-paieska')
 
-    # Change number of results in page to be 50
-    browser.find_element_by_xpath('//select[contains(@id, "SlctPageSize")]/option[@value="50"]').click()
-    browser.wait_n_elemens_by_css_selector(50, '.wInfo .searchResultDescription a')
+        browser.wait_element_by_xpath('//button[@value="Ieškoti"]')
+        browser.find_element_by_xpath('//label[text()="tekstas"]/preceding-sibling::input[1]').click()
+        browser.wait_element_by_xpath('//label[text()="periodika"]')
+        browser.find_element_by_xpath('//button[@value="Ieškoti"]').click()
+        browser.wait_element_by_class_name('objectsDataTable')
 
-    # Collect all search result links
-    next_btn = browser.find_element_by_xpath('//img[@title="Sekantis psl."]/..')
-    next_btn_style = next_btn.get_attribute('style')
-    while 'cursor:default' not in next_btn_style:
-        for row in browser.find_elements_by_css_selector('table.objectsDataTable > tbody > tr'):
-            yield row.find_element_by_css_selector('.searchResultDescription a').get_attribute('href'), {
-                'title': row.find_element_by_css_selector('.searchResultDescription a').text,
-                'source': {
-                    'title': row.find_element_by_css_selector('.wSourceTitle a').get_attribute('href'),
-                    'link': row.find_element_by_css_selector('.wSourceTitle a').text,
-                }
-            }
+        # Change number of results in page to be 50
+        browser.find_element_by_xpath('//select[contains(@id, "SlctPageSize")]/option[@value="50"]').click()
+        browser.wait_n_elemens_by_css_selector(50, '.wInfo .searchResultDescription a')
 
-        next_btn.click()
-
-        try:
-            browser.wait.until(ec.staleness_of(row))
-        except TimeoutException:
-            browser.get_screenshot_as_file('/tmp/shot.png')
-            break
-
+        # Collect all search result links
         next_btn = browser.find_element_by_xpath('//img[@title="Sekantis psl."]/..')
         next_btn_style = next_btn.get_attribute('style')
+        while 'cursor:default' not in next_btn_style:
+            first_item_link = None
+            for row in browser.find_elements_by_css_selector('table.objectsDataTable > tbody > tr'):
+                key = row.find_element_by_css_selector('.searchResultDescription a').get_attribute('href')
+                if first_item_link is None:
+                    first_item_link = key
+                yield key, {
+                    'title': row.find_element_by_css_selector('.searchResultDescription a').text,
+                    'source': {
+                        'title': row.find_element_by_css_selector('.wSourceTitle a').get_attribute('href'),
+                        'link': row.find_element_by_css_selector('.wSourceTitle a').text,
+                    }
+                }
 
-    browser.quit()
+            if first_item_link is None:
+                browser.get_screenshot_as_file('/tmp/shot.png')
+                break
+
+            next_btn.click()
+
+            try:
+                browser.wait.until(attribute_has_changed(By.CSS_SELECTOR, '.searchResultDescription a', 'href', first_item_link))
+            except TimeoutException:
+                browser.get_screenshot_as_file('/tmp/shot.png')
+                break
+
+            next_btn = browser.find_element_by_xpath('//img[@title="Sekantis psl."]/..')
+            next_btn_style = next_btn.get_attribute('style')
+    except:
+        browser.get_screenshot_as_file('/tmp/shot.png')
+        raise
+    finally:
+        browser.quit()
 
 
 pipeline = {
