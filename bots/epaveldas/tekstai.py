@@ -10,6 +10,8 @@ import selenium.webdriver.support.expected_conditions as ec
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException
 
 from databot import define, task
 
@@ -32,9 +34,13 @@ class attribute_has_changed:
         self.value = value
 
     def __call__(self, driver):
-        elem = driver.find_element(self.by, self.selector)
-        value = elem.get_attribute(self.attribute)
-        return self.value != value
+        try:
+            elem = driver.find_element(self.by, self.selector)
+            value = elem.get_attribute(self.attribute)
+        except StaleElementReferenceException:
+            return False
+        else:
+            return self.value != value
 
 
 class Browser(selenium.webdriver.Chrome):
@@ -44,8 +50,8 @@ class Browser(selenium.webdriver.Chrome):
         options.add_argument('headless')
         options.add_argument('window-size=1920x1080')
         super().__init__(chrome_options=options)
-        self.wait = WebDriverWait(self, 60)
-        self.set_page_load_timeout(60)
+        self.wait = WebDriverWait(self, 10)
+        self.set_page_load_timeout(10)
 
     def wait_element_by_class_name(self, name):
         return self.wait.until(ec.visibility_of_element_located((By.CLASS_NAME, name)))
@@ -75,9 +81,8 @@ def extract_index_urls():
         browser.wait_n_elemens_by_css_selector(50, '.wInfo .searchResultDescription a')
 
         # Collect all search result links
-        next_btn = browser.find_element_by_xpath('//img[@title="Sekantis psl."]/..')
-        next_btn_style = next_btn.get_attribute('style')
-        while 'cursor:default' not in next_btn_style:
+        page = 1
+        while True:
             first_item_link = None
             for row in browser.find_elements_by_css_selector('table.objectsDataTable > tbody > tr'):
                 key = row.find_element_by_css_selector('.searchResultDescription a').get_attribute('href')
@@ -91,22 +96,20 @@ def extract_index_urls():
                     }
                 }
 
-            if first_item_link is None:
-                browser.get_screenshot_as_file('/tmp/shot.png')
+            page += 1
+            try:
+                browser.find_element_by_xpath('//a[contains(@id, "objectsPaginatoridx%d")]' % page).click()
+            except NoSuchElementException:
+                browser.get_screenshot_as_file('/tmp/epaveldas_done.png')
                 break
-
-            next_btn.click()
 
             try:
                 browser.wait.until(attribute_has_changed(By.CSS_SELECTOR, '.searchResultDescription a', 'href', first_item_link))
             except TimeoutException:
-                browser.get_screenshot_as_file('/tmp/shot.png')
-                break
+                browser.get_screenshot_as_file('/tmp/epaveldas_attribute_has_changed.png')
 
-            next_btn = browser.find_element_by_xpath('//img[@title="Sekantis psl."]/..')
-            next_btn_style = next_btn.get_attribute('style')
     except:
-        browser.get_screenshot_as_file('/tmp/shot.png')
+        browser.get_screenshot_as_file('/tmp/epaveldas_error.png')
         raise
     finally:
         browser.quit()
