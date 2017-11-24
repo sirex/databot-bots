@@ -35,7 +35,7 @@ pipeline = {
         task('balsavimų-puslapiai', 'balsavimų-duomenys').
         select(this.key, {
             'data': select('.page-title:text').re(r'\d{4}-\d{2}-\d{2}'),
-            'posėdis': select('.page-title:text').re(r'(\w+) posėdis\)'),
+            'posėdis': select('h1.page-title:text').re(r'(\w+) posėdis\)'),
             'klausimai': ['xpath://b/a[contains(@class, "link") and text()="dokumento tekstas"]', {
                 'pavadinimas': select('xpath:./../preceding-sibling::b[contains(a/@class, "link")][1]/a/text()[1]'),
                 'rūšis': select('xpath:./../preceding-sibling::b[contains(a/@class, "link")][1]/following-sibling::text()[1]'),
