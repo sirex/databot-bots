@@ -34,18 +34,18 @@ pipeline = {
 
         task('balsavimų-puslapiai', 'balsavimų-duomenys').
         select(this.key, {
-            'data': select('.page-title:text').re(r'\d{4}-\d{2}-\d{2}'),
-            'posėdis': select('.page-title:text').re(r'(\w+) posėdis\)'),
+            'data': select('h1.page-title:text').re(r'\d{4}-\d{2}-\d{2}'),
+            'posėdis': select('h1.page-title:text').re(r'(\w+) posėdis\)'),
             'klausimai': ['xpath://b/a[contains(@class, "link") and text()="dokumento tekstas"]', {
                 'pavadinimas': select('xpath:./../preceding-sibling::b[contains(a/@class, "link")][1]/a/text()[1]'),
                 'rūšis': select('xpath:./../preceding-sibling::b[contains(a/@class, "link")][1]/following-sibling::text()[1]'),
                 'klausimo-nuoroda': select('xpath:./../preceding-sibling::b[contains(a/@class, "link")][1]/a/@href'),
                 'dokumento-nuoroda': select('@href'),
             }],
-            'formuluotė': select('#page-content .default xpath://text()[.="Formuluotė: "]/following-sibling::b[1]/text()?'),
-            'laikas': select('#page-content .default xpath://text()[.="Balsavimo laikas: "]/following-sibling::b[1]/text()'),
-            'balsavo-seimo-narių': select('#page-content .default xpath://text()[.="Balsavo Seimo narių: "]/following-sibling::b[1]/text()'),
-            'viso-seimo-narių': select('#page-content .default xpath://text()[.="Balsavo Seimo narių: "]/following-sibling::text()[.=" iš "][1]/following-sibling::b[1]/text()'),
+            'formuluotė': select('#page-content xpath://text()[.="Formuluotė: "]/following-sibling::b[1]/text()?'),
+            'laikas': select('#page-content xpath://text()[.="Balsavimo laikas: "]/following-sibling::b[1]/text()'),
+            'balsavo-seimo-narių': select('#page-content xpath://text()[.="Balsavo Seimo narių: "]/following-sibling::b[1]/text()'),
+            'viso-seimo-narių': select('#page-content xpath://text()[.="Balsavo Seimo narių: "]/following-sibling::text()[.=" iš "][1]/following-sibling::b[1]/text()'),
             'rezultatai': ['.sale-group-title xpath:text()[.="Individualūs balsavimo  rezultatai"]/../following-sibling::table/tr[count(td)=5]', {
                 'vardas': select('td[1] > a:text'),
                 'seimo-nario-nuoroda': select('td[1] > a@href'),
