@@ -3,7 +3,7 @@
 import yaml
 import botlib
 
-from databot import define, task, this, call, strip
+from databot import define, task, this, select, call
 
 
 with open('settings.yml') as f:
@@ -37,7 +37,7 @@ pipeline = {
         download(cookies=cookies, check='#page-content div.default b xpath:a[text()="susiję dokumentai"]'),
 
         task('dokumentų-puslapiai', 'metadata').
-        select(this.key, call(dict, ['.basic .ltb', (strip(':text'), strip('b:text?'))])).
+        select(this.key, call(dict, ['.basic .ltb', (select(':text').strip(), select('b:text?').strip())])).
         dedup(),
 
         task('dokumentų-puslapiai', 'texts').
